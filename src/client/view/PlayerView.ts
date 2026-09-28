@@ -81,6 +81,7 @@ function stateFromUpdate(pu: PlayerUpdate): PlayerState {
     killedBy: pu.killedBy ?? null,
     deathPosition: pu.deathPosition ?? null,
     tilesOwned: pu.tilesOwned!,
+    bonusTroopTiles: pu.bonusTroopTiles ?? 0,
     gold: Number(pu.gold!),
     tradeGold: Number(pu.tradeGold ?? 0n),
     trainGold: Number(pu.trainGold ?? 0n),
@@ -521,6 +522,9 @@ export class PlayerView {
   }
   numTilesOwned(): number {
     return this.state.tilesOwned;
+  }
+  bonusTroopTiles(): number {
+    return this.state.bonusTroopTiles;
   }
   allies(): PlayerView[] {
     return this.state.allies.map(

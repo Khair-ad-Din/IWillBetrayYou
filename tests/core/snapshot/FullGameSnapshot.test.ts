@@ -165,7 +165,11 @@ describe.each(VARIANTS)("full game snapshots: %s", (_, overrides) => {
       if (Object.keys(overrides).length > 0) return; // checked once, on FFA
       // Runs during the spawn phase and finishes inside init, so it is never
       // alive at a tick boundary. BasicExecutions.test.ts covers it directly.
-      const neverStored = new Set(["Pause"]);
+      // SAMMissile lives only a few ticks, so whether one is in flight at a
+      // checkpoint depends on how the scripted game happens to develop; its
+      // snapshot is covered directly in StructureExecutions.test.ts ("SAM
+      // targeting and intercepting").
+      const neverStored = new Set(["Pause", "SAMMissile"]);
       const missing = EXECUTION_SNAPSHOT_TYPES.map((t) => t.name).filter(
         (name) => !reference.execTypes.has(name) && !neverStored.has(name),
       );

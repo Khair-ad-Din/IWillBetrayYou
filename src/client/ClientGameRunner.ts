@@ -12,12 +12,12 @@ import {
   PlayerCosmeticRefs,
   ServerMessage,
 } from "../core/Schemas";
-import { findClosestBy, replacer, simpleHash } from "../core/Util";
+import { findClosestBy, replacer } from "../core/Util";
 import { provinceGenerationOptions } from "../core/configuration/ProvinceConfig";
 import {
+  BuildableStructures,
   BuildableUnit,
   PlayerType,
-  Structures,
   UnitType,
 } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
@@ -29,10 +29,6 @@ import {
   HashUpdate,
 } from "../core/game/GameUpdates";
 import { generateProvinces } from "../core/game/Provinces";
-import {
-  generateResourceSites,
-  RESOURCE_TYPES,
-} from "../core/game/ResourceSites";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import {
   GRAPHICS_KEY,
@@ -760,20 +756,6 @@ async function createClientGame(
     );
     view.setProvinces(provinces.ids);
     console.log(`Provinces: ${provinces.count}`);
-    // Seeded from the game id, like the simulation, so every player sees the
-    // same sites; hidden until the spawn phase ends (WebGLFrameBuilder).
-    const resourceSites = generateResourceSites(
-      gameMap.gameMap,
-      provinces,
-      simpleHash(lobbyConfig.gameStartInfo.gameID),
-    );
-    view.setResourceSites(
-      resourceSites.map((s) => ({
-        x: gameMap.gameMap.x(s.tile),
-        y: gameMap.gameMap.y(s.tile),
-        icon: RESOURCE_TYPES.indexOf(s.type),
-      })),
-    );
 
     const graphicsListenerAbort = new AbortController();
 
@@ -1309,7 +1291,7 @@ export class ClientGameRunner {
   }
 
   private findAndUpgradeNearestBuilding(clickedTile: TileRef) {
-    this.myPlayer!.actions(clickedTile, Structures.types)
+    this.myPlayer!.actions(clickedTile, BuildableStructures.types)
       .then((actions) => {
         const upgradeUnits: {
           unitId: number;

@@ -53,6 +53,14 @@ export const RESOURCE_SETTINGS = {
   minPerType: 2,
   /** Provinces smaller than this (tiny islands) never get a resource. */
   minProvinceTiles: 500,
+  /** A farm's owner counts its tiles in the farm's province this many times
+   * over towards the troop cap. */
+  farmTileMultiplier: 2,
+  /** Gold per tick a mine pays per level. */
+  mineGoldPerLevel: 300,
+  /** Ticks a mine must stay with one owner to gain a level (10 ticks = 1 s).
+   * It drops back to level 1 when captured. */
+  mineLevelUpTicks: 2 * 60 * 10,
 };
 
 export interface ProvinceGenerationOptions {

@@ -16,6 +16,7 @@ import { GameMap, TileRef } from "../../core/game/GameMap";
 import {
   GameUpdateType,
   GameUpdateViewData,
+  ResourceSitesUpdate,
   SpawnPhaseEndUpdate,
 } from "../../core/game/GameUpdates";
 import { ATTACK_DELTA_OUTGOING } from "../../core/game/GameUpdateUtils";
@@ -323,6 +324,12 @@ export class GameView implements GameMap {
     }
     if (gu.updates[GameUpdateType.Win].length > 0) {
       this._gameOver = true;
+    }
+    const siteUpdates = gu.updates[GameUpdateType.ResourceSites];
+    if (siteUpdates.length > 0) {
+      const latest = siteUpdates[siteUpdates.length - 1] as ResourceSitesUpdate;
+      this._resourceSites = latest.sites;
+      this._resourceSitesVersion++;
     }
 
     const myDisplayName = formatPlayerDisplayName(
@@ -1142,6 +1149,17 @@ export class GameView implements GameMap {
   }
   // Set once the sim has decided the game (WinUpdate). Play may go on for
   // those who stay, but the server archives the record at that point.
+  // Resource sites as last sent by the simulation (after the spawn phase).
+  private _resourceSites: ResourceSitesUpdate["sites"] = [];
+  private _resourceSitesVersion = 0;
+  resourceSites(): ResourceSitesUpdate["sites"] {
+    return this._resourceSites;
+  }
+  /** Bumped whenever resourceSites() changes. */
+  resourceSitesVersion(): number {
+    return this._resourceSitesVersion;
+  }
+
   private _gameOver = false;
   gameOver(): boolean {
     return this._gameOver;

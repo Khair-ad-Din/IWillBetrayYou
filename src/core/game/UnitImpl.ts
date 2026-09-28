@@ -58,6 +58,8 @@ export class UnitImpl implements Unit {
   private _missileTimerQueue: number[] = [];
   private _hasTrainStation: boolean = false;
   private _level: number = 1;
+  // A natural harbor from a resource site (Port only).
+  private _natural = false;
   private _targetable: boolean = true;
   private _loaded: boolean | undefined;
   private _trainType: TrainType | undefined;
@@ -116,6 +118,7 @@ export class UnitImpl implements Unit {
     this._loaded =
       "loaded" in params ? (params.loaded ?? undefined) : undefined;
     this._trainType = "trainType" in params ? params.trainType : undefined;
+    this._natural = "natural" in params ? (params.natural ?? false) : false;
 
     switch (this._type) {
       case UnitType.Warship:
@@ -125,8 +128,13 @@ export class UnitImpl implements Unit {
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:
-        this.mg.stats().unitBuild(_owner, this._type);
+        // A natural harbor is handed out, not built.
+        if (!this._natural) this.mg.stats().unitBuild(_owner, this._type);
     }
+  }
+
+  isNatural(): boolean {
+    return this._natural;
   }
 
   setTargetable(targetable: boolean): void {
@@ -195,6 +203,7 @@ export class UnitImpl implements Unit {
       hasTrainStation: this._hasTrainStation,
       trainType: this._trainType,
       loaded: this._loaded,
+      natural: this._natural || undefined,
     };
     return update;
   }
@@ -844,6 +853,7 @@ export class UnitImpl implements Unit {
       missileTimerQueue: [...this._missileTimerQueue],
       hasTrainStation: this._hasTrainStation,
       level: this._level,
+      natural: this._natural,
       targetable: this._targetable,
       loaded: this._loaded ?? null,
       trainType: this._trainType ?? null,
@@ -899,6 +909,7 @@ export class UnitImpl implements Unit {
     this._missileTimerQueue = [...s.missileTimerQueue];
     this._hasTrainStation = s.hasTrainStation;
     this._level = s.level;
+    this._natural = s.natural;
     this._targetable = s.targetable;
     this._loaded = s.loaded ?? undefined;
     this._trainType = s.trainType ?? undefined;
@@ -911,7 +922,11 @@ export class UnitImpl implements Unit {
 
 export const UnitSnapshot = snapshotType({
   name: "Unit",
-  version: 1,
+  version: 2,
+  migrations: {
+    // v2 adds natural harbors.
+    1: (d) => ({ ...d, natural: false }),
+  },
   schema: z.object({
     id: zInt(),
     type: UnitTypeSchema,
@@ -956,6 +971,7 @@ export const UnitSnapshot = snapshotType({
     missileTimerQueue: z.array(zInt()),
     hasTrainStation: z.boolean(),
     level: zInt(),
+    natural: z.boolean(),
     targetable: z.boolean(),
     loaded: z.boolean().nullable(),
     trainType: z.enum(TrainType).nullable(),

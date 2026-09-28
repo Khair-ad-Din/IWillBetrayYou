@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { RESOURCE_SETTINGS } from "../configuration/ProvinceConfig";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
@@ -394,6 +395,7 @@ export class PlayerImpl implements Player {
       killedBy: deathStats?.killedBy ?? null,
       deathPosition: deathStats?.deathPosition ?? null,
       tilesOwned: this.numTilesOwned(),
+      bonusTroopTiles: this.bonusTroopTiles(),
       gold: this._gold,
       tradeGold: this._tradeGold,
       trainGold: this._trainGold,
@@ -1487,6 +1489,10 @@ export class PlayerImpl implements Player {
     if (!this.canUpgradeUnitType(unit.type())) {
       return false;
     }
+    // Natural harbors are a free gift and stay at level 1.
+    if (unit.isNatural()) {
+      return false;
+    }
     if (!this.canBuildUnitType(unit.type())) {
       return false;
     }
@@ -1494,6 +1500,50 @@ export class PlayerImpl implements Player {
       return false;
     }
     return true;
+  }
+
+  /**
+   * Extra tiles counted towards the troop cap: each farm makes the owner's
+   * tiles in its province count farmTileMultiplier times over.
+   */
+  bonusTroopTiles(): number {
+    const farms = this.units(UnitType.Farm);
+    if (farms.length === 0) return 0;
+    const provinces = this.mg.provinces();
+    const extra = RESOURCE_SETTINGS.farmTileMultiplier - 1;
+    let bonus = 0;
+    for (const farm of farms) {
+      const p = provinces.provinceOf(farm.tile());
+      if (p !== NO_PROVINCE) {
+        bonus += provinces.ownedBy(p, this.smallID()) * extra;
+      }
+    }
+    return bonus;
+  }
+
+  /**
+   * Hands this player a structure without building it: no cost, and it does
+   * not count as constructed, so it never raises the cost of the next one.
+   * Used for resource sites.
+   */
+  grantUnit<T extends UnitType>(
+    type: T,
+    tile: TileRef,
+    params: UnitParams<T>,
+  ): Unit {
+    const unit = new UnitImpl(
+      type,
+      this.mg,
+      tile,
+      this.mg.nextUnitID(),
+      this,
+      params,
+    );
+    this._units.push(unit);
+    this._myUnitsVersion++;
+    this.mg.addUpdate(unit.toUpdate());
+    this.mg.addUnit(unit);
+    return unit;
   }
 
   upgradeUnit(unit: Unit) {
@@ -1620,6 +1670,10 @@ export class PlayerImpl implements Player {
       case UnitType.City:
       case UnitType.Factory:
         return this.landBasedStructureSpawn(targetTile, validTiles);
+      case UnitType.Farm:
+      case UnitType.Mine:
+        // Resource buildings are never built by players.
+        return false;
       default:
         assertNever(unitType);
     }

@@ -19,6 +19,8 @@ import {
   UT_CITY,
   UT_DEFENSE_POST,
   UT_FACTORY,
+  UT_FARM,
+  UT_MINE,
   UT_MISSILE_SILO,
   UT_PORT,
   UT_SAM_LAUNCHER,
@@ -53,9 +55,30 @@ const STRUCTURE_ORDER = [
   UT_DEFENSE_POST,
   UT_SAM_LAUNCHER,
   UT_MISSILE_SILO,
+  UT_FARM,
+  UT_MINE,
 ] as const;
 
-const ATLAS_COLS = STRUCTURE_ORDER.length;
+/** Columns in the shipped icon atlas image; later columns are drawn here. */
+const IMAGE_ATLAS_COLS = 6;
+/** Extra atlas column: a port that is a natural harbor (resource site). */
+const NATURAL_HARBOR_COL = STRUCTURE_ORDER.length;
+const ATLAS_COLS = STRUCTURE_ORDER.length + 1;
+
+/** Resource buildings are sized like this structure type. */
+const SIZE_LIKE: Record<string, string> = {
+  [UT_FARM]: UT_CITY,
+  [UT_MINE]: UT_CITY,
+};
+
+/** An unclaimed resource site, drawn as a neutral (grey) structure. */
+export interface ResourceSiteMarker {
+  tile: number;
+  /** Structure type whose icon it shows (UT_FARM, UT_MINE or UT_PORT). */
+  unitType: string;
+  /** Show the natural-harbor icon (with UT_PORT). */
+  natural: boolean;
+}
 
 // ---------------------------------------------------------------------------
 // Instance data layout
@@ -105,6 +128,8 @@ export class StructurePass {
 
   private vao: WebGLVertexArrayObject;
   private instanceBuf: DynamicInstanceBuffer;
+  private resourceSites: ResourceSiteMarker[] = [];
+  private lastUnits: Map<number, UnitState> | null = null;
   private ghostInstanceBuf: WebGLBuffer;
 
   private paletteTex: WebGLTexture;
@@ -282,10 +307,22 @@ export class StructurePass {
     img.crossOrigin = "anonymous";
     img.src = iconAtlasUrl;
     await img.decode();
+    // The shipped atlas has IMAGE_ATLAS_COLS columns; the resource buildings
+    // get placeholder icons drawn into extra columns until real art exists.
+    const colW = img.width / IMAGE_ATLAS_COLS;
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(colW * ATLAS_COLS);
+    canvas.height = img.height;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(img, 0, 0);
+    drawPlaceholderIcon(ctx, STRUCTURE_ORDER.indexOf(UT_FARM), colW, "farm");
+    drawPlaceholderIcon(ctx, STRUCTURE_ORDER.indexOf(UT_MINE), colW, "mine");
+    drawPlaceholderIcon(ctx, NATURAL_HARBOR_COL, colW, "harbor");
+
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
     gl.generateMipmap(gl.TEXTURE_2D);
     gl.texParameteri(
       gl.TEXTURE_2D,
@@ -303,12 +340,40 @@ export class StructurePass {
     this.hoverOwner = ownerID;
   }
 
+  /** Unclaimed resource sites; redrawn with the structures. */
+  setResourceSites(sites: ResourceSiteMarker[]): void {
+    this.resourceSites = sites;
+    if (this.lastUnits !== null) this.updateStructures(this.lastUnits);
+  }
+
+  private atlasColFor(unitType: string, natural: boolean): number | undefined {
+    if (natural && unitType === UT_PORT) return NATURAL_HARBOR_COL;
+    return this.typeToAtlasCol.get(unitType);
+  }
+
   updateStructures(units: Map<number, UnitState>): void {
+    this.lastUnits = units;
     let count = 0;
+
+    // Unclaimed resource sites: neutral grey (the under-construction look).
+    for (const site of this.resourceSites) {
+      const atlasIdx = this.atlasColFor(site.unitType, site.natural);
+      if (atlasIdx === undefined) continue;
+      this.instanceBuf.ensureCapacity(count + 1);
+      const off = count * FLOATS_PER_INSTANCE;
+      const x = site.tile % this.mapW;
+      this.instanceBuf.float32[off + 0] = x;
+      this.instanceBuf.float32[off + 1] = (site.tile - x) / this.mapW;
+      this.instanceBuf.float32[off + 2] = 0;
+      this.instanceBuf.float32[off + 3] = 1;
+      this.instanceBuf.float32[off + 4] = atlasIdx;
+      this.instanceBuf.float32[off + 5] = 0;
+      count++;
+    }
 
     for (const unit of units.values()) {
       if (!unit.isActive) continue;
-      const atlasIdx = this.typeToAtlasCol.get(unit.unitType);
+      const atlasIdx = this.atlasColFor(unit.unitType, unit.natural);
       if (atlasIdx === undefined) continue;
 
       this.instanceBuf.ensureCapacity(count + 1);
@@ -387,11 +452,16 @@ export class StructurePass {
     // Build per-structure uniform arrays from settings, ordered by atlas column
     const scales = new Float32Array(ATLAS_COLS);
     const fills = new Float32Array(ATLAS_COLS);
+    const shapeOf = (type: string) =>
+      ss.shapes[(SIZE_LIKE[type] ?? type) as keyof typeof ss.shapes];
     for (let i = 0; i < STRUCTURE_ORDER.length; i++) {
-      const cfg = ss.shapes[STRUCTURE_ORDER[i]];
+      const cfg = shapeOf(STRUCTURE_ORDER[i]);
       scales[i] = cfg?.scale ?? 1.0;
       fills[i] = cfg?.iconFill ?? 0.6;
     }
+    const portCfg = shapeOf(UT_PORT);
+    scales[NATURAL_HARBOR_COL] = portCfg?.scale ?? 1.0;
+    fills[NATURAL_HARBOR_COL] = portCfg?.iconFill ?? 0.6;
     gl.uniform1fv(this.uShapeScales, scales);
     gl.uniform1fv(this.uIconFills, fills);
 
@@ -495,4 +565,77 @@ export class StructurePass {
     gl.deleteVertexArray(this.vao);
     gl.deleteTexture(this.atlasTex);
   }
+}
+
+/**
+ * Placeholder resource-building icons, white on transparent like the shipped
+ * atlas, drawn into one atlas column.
+ */
+function drawPlaceholderIcon(
+  ctx: CanvasRenderingContext2D,
+  col: number,
+  colW: number,
+  kind: "farm" | "mine" | "harbor",
+): void {
+  const h = ctx.canvas.height;
+  const size = Math.min(colW, h);
+  const u = size / 100; // drawing units: the icon spans about -40..40
+  ctx.save();
+  ctx.translate(col * colW + colW / 2, h / 2);
+  ctx.scale(u, u);
+  ctx.strokeStyle = "white";
+  ctx.fillStyle = "white";
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 7;
+  switch (kind) {
+    case "farm": {
+      // A wheat ear: a stem with grains on both sides.
+      ctx.beginPath();
+      ctx.moveTo(0, 36);
+      ctx.lineTo(0, -34);
+      ctx.stroke();
+      for (let i = 0; i < 4; i++) {
+        const y = -26 + i * 14;
+        for (const side of [-1, 1]) {
+          ctx.beginPath();
+          ctx.ellipse(side * 9, y, 6, 10, side * 0.6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      break;
+    }
+    case "mine": {
+      // A pickaxe: a diagonal handle and a curved head.
+      ctx.beginPath();
+      ctx.moveTo(-26, 30);
+      ctx.lineTo(18, -14);
+      ctx.stroke();
+      ctx.lineWidth = 9;
+      ctx.beginPath();
+      ctx.arc(22, 22, 44, Math.PI * 1.08, Math.PI * 1.42);
+      ctx.stroke();
+      break;
+    }
+    case "harbor": {
+      // An anchor inside a ring, to tell it apart from a built port.
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(0, 0, 40, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.arc(0, -22, 7, 0, Math.PI * 2);
+      ctx.moveTo(0, -15);
+      ctx.lineTo(0, 26);
+      ctx.moveTo(-14, -6);
+      ctx.lineTo(14, -6);
+      ctx.moveTo(-22, 10);
+      ctx.quadraticCurveTo(-18, 28, 0, 28);
+      ctx.quadraticCurveTo(18, 28, 22, 10);
+      ctx.stroke();
+      break;
+    }
+  }
+  ctx.restore();
 }

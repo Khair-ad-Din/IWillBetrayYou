@@ -208,15 +208,18 @@
     "title": "Selecciona idioma"
   },
   "unit_type": {
+    "atom_bomb": "Bomba atómica",
     "city": "Ciudad",
     "defense_post": "Puesto de defensa",
-    "port": "Puerto",
-    "warship": "Barco de guerra",
-    "missile_silo": "Silo de misiles",
-    "sam_launcher": "Misil tierra-aire",
-    "atom_bomb": "Bomba atómica",
+    "farm": "Granja",
     "hydrogen_bomb": "Bomba de hidrógeno",
-    "mirv": "MIRV"
+    "mine": "Mina",
+    "mirv": "MIRV",
+    "missile_silo": "Silo de misiles",
+    "natural_harbor": "Puerto natural",
+    "port": "Puerto",
+    "sam_launcher": "Misil tierra-aire",
+    "warship": "Barco de guerra"
   },
   "user_setting": {
     "title": "Ajustes de Usuario",

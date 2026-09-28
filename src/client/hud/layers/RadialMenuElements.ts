@@ -3,6 +3,7 @@ import { Config } from "../../../core/configuration/Config";
 import {
   AllPlayers,
   BuildableAttacks,
+  BuildableStructures,
   bulkCost,
   maxBulkAmount,
   NUKE_BULK_STEPS,
@@ -402,7 +403,7 @@ function getAllEnabledUnits(
   };
 
   if (myPlayer) {
-    Structures.types.forEach(addIfEnabled);
+    BuildableStructures.types.forEach(addIfEnabled);
   } else {
     BuildableAttacks.types.forEach(addIfEnabled);
   }

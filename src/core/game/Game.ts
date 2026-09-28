@@ -210,6 +210,10 @@ export enum UnitType {
   MIRVWarhead = "MIRV Warhead",
   Train = "Train",
   Factory = "Factory",
+  // Resource buildings: never built, only handed to whoever conquers a
+  // resource site (see ResourceSiteExecution).
+  Farm = "Farm",
+  Mine = "Mine",
 }
 
 export enum TrainType {
@@ -232,7 +236,8 @@ export const BuildableAttacks = unitTypeGroup([
   UnitType.Warship,
 ] as const);
 
-export const Structures = unitTypeGroup([
+/** Structures players can build. */
+export const BuildableStructures = unitTypeGroup([
   UnitType.City,
   UnitType.DefensePost,
   UnitType.SAMLauncher,
@@ -241,8 +246,20 @@ export const Structures = unitTypeGroup([
   UnitType.Factory,
 ] as const);
 
+/** Structures handed out by resource sites, never built. */
+export const ResourceStructures = unitTypeGroup([
+  UnitType.Farm,
+  UnitType.Mine,
+] as const);
+
+/** Every structure: captured with its tile, destroyed by nukes. */
+export const Structures = unitTypeGroup([
+  ...BuildableStructures.types,
+  ...ResourceStructures.types,
+] as const);
+
 export const BuildMenus = unitTypeGroup([
-  ...Structures.types,
+  ...BuildableStructures.types,
   ...BuildableAttacks.types,
 ] as const);
 
@@ -277,7 +294,11 @@ export interface UnitParamsMap {
     targetUnit: Unit;
   };
 
-  [UnitType.Port]: Record<string, never>;
+  [UnitType.Port]: {
+    // A natural harbor handed out by a resource site: free, not upgradable,
+    // and it does not raise the cost of the owner's other ports.
+    natural?: boolean;
+  };
 
   [UnitType.AtomBomb]: {
     targetTile?: number;
@@ -319,6 +340,10 @@ export interface UnitParamsMap {
   [UnitType.SAMLauncher]: Record<string, never>;
 
   [UnitType.City]: Record<string, never>;
+
+  [UnitType.Farm]: Record<string, never>;
+
+  [UnitType.Mine]: Record<string, never>;
 }
 
 // Type helper to get params type for a specific unit type
@@ -570,6 +595,8 @@ export interface Unit {
 
   // Upgradable Structures
   level(): number;
+  /** A natural harbor handed out by a resource site (ports only). */
+  isNatural(): boolean;
   increaseLevel(): void;
   decreaseLevel(destroyer?: Player): void;
 }
@@ -763,6 +790,14 @@ export interface Player {
   canTrade(other: Player): boolean;
 
   // Attacking.
+  /** Extra tiles counted towards the troop cap (farms). */
+  bonusTroopTiles(): number;
+  /** Hands this player a structure without building it (resource sites). */
+  grantUnit<T extends UnitType>(
+    type: T,
+    tile: TileRef,
+    params: UnitParams<T>,
+  ): Unit;
   canAttack(tile: TileRef): boolean;
   bordersProvince(province: number, ownerSmallID: number): boolean;
   canAttackPlayer(player: Player, treatAFKFriendly?: boolean): boolean;

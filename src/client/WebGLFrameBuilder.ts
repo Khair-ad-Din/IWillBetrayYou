@@ -14,6 +14,7 @@ import {
   TRAIL_EFFECT_TYPES,
 } from "../core/CosmeticSchemas";
 import { PlayerType } from "../core/game/Game";
+import { ResourceType } from "../core/game/ResourceSites";
 import { decodePatternData } from "../core/PatternDecoder";
 import { getCachedCosmetics } from "./Cosmetics";
 import { buildTerrainRowSpans } from "./render/frame/derive/TerrainRowSpans";
@@ -28,6 +29,7 @@ import {
 } from "./render/types";
 // Value import from the leaf module (not the ./render/gl barrel) so non-Vite
 // consumers don't pull in GPURenderer and its shaders — see note above.
+import type { ResourceSiteMarker } from "./render/gl/passes/StructurePass";
 import {
   EFFECT_PALETTE_BLOCKS,
   MAX_TRAIL_COLORS,
@@ -44,8 +46,11 @@ import {
 } from "./render/gl/utils/EffectPalette";
 import {
   UT_ATOM_BOMB,
+  UT_FARM,
   UT_HYDROGEN_BOMB,
+  UT_MINE,
   UT_MIRV_WARHEAD,
+  UT_PORT,
 } from "./render/types/UnitType";
 import type { GameView, PlayerView } from "./view";
 
@@ -228,6 +233,7 @@ export class WebGLFrameBuilder {
   private localPlayerSmallID = 0;
   // Last pushed "outgoing|incoming" province lists, to skip no-op uploads.
   private attackedProvincesKey = "";
+  private resourceSitesVersion = -1;
 
   constructor(private readonly view: MapRenderer) {
     this.palette = new Float32Array(PALETTE_SIZE * 2 * 4);
@@ -302,6 +308,7 @@ export class WebGLFrameBuilder {
     this.syncPlayerSpawns(gameView);
     this.syncLocalPlayer(gameView);
     this.syncAttackedProvinces(gameView);
+    this.syncResourceSites(gameView);
     this.syncSpawnOverlay(gameView);
     this.syncSmallPlayerGlow(gameView);
     this.syncTerrainDeltas(gameView);
@@ -421,6 +428,32 @@ export class WebGLFrameBuilder {
     }
   }
 
+  /**
+   * Unclaimed resource sites, drawn as neutral structures. The simulation only
+   * sends them once the spawn phase is over, so they never guide a spawn.
+   */
+  private syncResourceSites(gameView: GameView): void {
+    const version = gameView.resourceSitesVersion();
+    if (version === this.resourceSitesVersion) return;
+    this.resourceSitesVersion = version;
+    const markers: ResourceSiteMarker[] = [];
+    for (const site of gameView.resourceSites()) {
+      if (site.state !== "unclaimed") continue;
+      switch (site.type) {
+        case ResourceType.Farm:
+          markers.push({ tile: site.tile, unitType: UT_FARM, natural: false });
+          break;
+        case ResourceType.Mine:
+          markers.push({ tile: site.tile, unitType: UT_MINE, natural: false });
+          break;
+        case ResourceType.NaturalHarbor:
+          markers.push({ tile: site.tile, unitType: UT_PORT, natural: true });
+          break;
+      }
+    }
+    this.view.setResourceSites(markers);
+  }
+
   /** Outlines the provinces the local player is attacking / attacked in. */
   private syncAttackedProvinces(gameView: GameView): void {
     const me = gameView.myPlayer();
@@ -463,8 +496,6 @@ export class WebGLFrameBuilder {
    */
   private syncSpawnOverlay(gameView: GameView): void {
     const inSpawnPhase = gameView.inSpawnPhase();
-    // Resource sites must not help anyone pick a spawn.
-    this.view.setResourceSitesVisible(!inSpawnPhase);
     // Past the spawn phase only the local ring can stay up (the tutorial
     // keeps it while a new player finds their territory).
     if (!inSpawnPhase && !gameView.ownSpawnRing()) {

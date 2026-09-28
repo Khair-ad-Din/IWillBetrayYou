@@ -28,6 +28,7 @@ import { PlayerExecutionSnapshot } from "../execution/PlayerExecution";
 import { PortExecutionSnapshot } from "../execution/PortExecution";
 import { QuickChatExecutionSnapshot } from "../execution/QuickChatExecution";
 import { RecomputeRailClusterExecutionSnapshot } from "../execution/RecomputeRailClusterExecution";
+import { ResourceSiteExecutionSnapshot } from "../execution/ResourceSiteExecution";
 import { RetreatExecutionSnapshot } from "../execution/RetreatExecution";
 import { SAMLauncherExecutionSnapshot } from "../execution/SAMLauncherExecution";
 import { SAMMissileExecutionSnapshot } from "../execution/SAMMissileExecution";
@@ -97,4 +98,5 @@ export const EXECUTION_SNAPSHOT_TYPES = [
   UpgradeStructureExecutionSnapshot,
   WarshipExecutionSnapshot,
   WinCheckExecutionSnapshot,
+  ResourceSiteExecutionSnapshot,
 ] as unknown as readonly ExecutionSnapshotType<unknown>[];

@@ -17,6 +17,7 @@ import {
   WarshipState,
 } from "./Game";
 import { TileRef } from "./GameMap";
+import type { ResourceType } from "./ResourceSites";
 
 export interface GameUpdateViewData {
   tick: number;
@@ -106,6 +107,7 @@ export enum GameUpdateType {
   SpawnPhaseEnd,
   GamePaused,
   DonateEvent,
+  ResourceSites,
 }
 
 export type GameUpdate =
@@ -131,7 +133,16 @@ export type GameUpdate =
   | EmbargoUpdate
   | SpawnPhaseEndUpdate
   | GamePausedUpdate
-  | DonateEventUpdate;
+  | DonateEventUpdate
+  | ResourceSitesUpdate;
+
+export type ResourceSiteState = "unclaimed" | "claimed" | "destroyed";
+
+/** Every resource site and its state; sent whenever one changes. */
+export interface ResourceSitesUpdate {
+  type: GameUpdateType.ResourceSites;
+  sites: { type: ResourceType; tile: TileRef; state: ResourceSiteState }[];
+}
 
 export interface BonusEventUpdate {
   type: GameUpdateType.BonusEvent;
@@ -200,6 +211,7 @@ export interface UnitUpdate {
   missileTimerQueue: number[];
   level: number;
   hasTrainStation: boolean;
+  natural?: boolean; // Only for natural harbors (ports from resource sites)
   trainType?: TrainType; // Only for trains
   loaded?: boolean; // Only for trains
   samUpgrade?: SamLauncherState;
@@ -244,6 +256,8 @@ export interface PlayerUpdate {
   killedBy?: ClientID | null;
   deathPosition?: number | null;
   tilesOwned?: number;
+  /** Extra tiles counted towards the troop cap (farms). */
+  bonusTroopTiles?: number;
   gold?: Gold;
   /** Cumulative ship-trade revenue (changes only on arrivals, so it diffs). */
   tradeGold?: Gold;

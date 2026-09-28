@@ -36,6 +36,7 @@ function unit(overrides: Partial<UnitState> = {}): UnitState {
     markedForDeletion: false,
     health: null,
     underConstruction: false,
+    natural: false,
     targetUnitId: null,
     targetTile: null,
     troops: 0,

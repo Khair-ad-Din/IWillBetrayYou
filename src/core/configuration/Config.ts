@@ -693,6 +693,13 @@ export class Config {
           cost: () => 0n,
         };
         break;
+      case UnitType.Farm:
+      case UnitType.Mine:
+        // Never built: handed to whoever conquers the resource site.
+        info = {
+          cost: () => 0n,
+        };
+        break;
       default:
         assertNever(type);
     }
@@ -1025,7 +1032,10 @@ export class Config {
     const maxTroops =
       player.type() === PlayerType.Human && this.hasInfiniteTroopsFor(player)
         ? 1_000_000_000
-        : 2 * (pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
+        : 2 *
+            (pow(player.numTilesOwned() + player.bonusTroopTiles(), 0.6) *
+              1000 +
+              50000) +
           player
             .units(UnitType.City)
             .filter((u) => !u.isUnderConstruction())

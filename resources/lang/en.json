@@ -2166,9 +2166,12 @@
     "city": "City",
     "defense_post": "Defense Post",
     "factory": "Factory",
+    "farm": "Farm",
     "hydrogen_bomb": "Hydrogen Bomb",
+    "mine": "Mine",
     "mirv": "MIRV",
     "missile_silo": "Missile Silo",
+    "natural_harbor": "Natural Harbor",
     "port": "Port",
     "sam_launcher": "SAM Launcher",
     "warship": "Warship"

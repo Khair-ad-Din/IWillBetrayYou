@@ -60,6 +60,8 @@ export interface EmojiData {
 }
 
 export interface PlayerState {
+  /** Extra tiles counted towards the troop cap (farms). */
+  bonusTroopTiles: number;
   smallID: number;
   isAlive: boolean;
   isDisconnected: boolean;
@@ -111,6 +113,8 @@ export interface UnitState {
   markedForDeletion: number | false; // -1 -> false, else tick
   health: number | null;
   underConstruction: boolean;
+  /** A natural harbor from a resource site (ports only). */
+  natural: boolean;
   targetUnitId: number | null;
   targetTile: number | null;
   troops: number;
