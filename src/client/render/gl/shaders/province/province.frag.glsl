@@ -9,6 +9,7 @@ uniform float uZoom;
 uniform float uOpacity;
 uniform vec3 uColor;
 uniform uint uHighlight;          // hovered province id, 0 = none
+uniform float uTime;              // seconds, for the marching outline
 
 in vec2 vWorldPos;
 out vec4 fragColor;
@@ -70,7 +71,7 @@ void main() {
   } else {
     vec2 f = wp - vec2(tile);
     if (emphasized) {
-      float lw = min(px * 2.5, 0.5);
+      float lw = min(px * 3.0, 0.5);
       border = (f.x < lw && outside(id, tile + ivec2(-1, 0))) ||
                (f.x > 1.0 - lw && outside(id, tile + ivec2(1, 0))) ||
                (f.y < lw && outside(id, tile + ivec2(0, -1))) ||
@@ -84,13 +85,27 @@ void main() {
     }
   }
 
-  if (border) {
-    fragColor = emphasized ? vec4(accent, 0.9) : vec4(uColor, uOpacity);
+  if (!emphasized) {
+    if (!border) discard;
+    fragColor = vec4(uColor, uOpacity);
     return;
   }
-  // A faint wash over the hovered / contested province.
-  if (emphasized) {
-    fragColor = vec4(accent, hovered && flags == 0u ? 0.08 : 0.12);
+
+  // Emphasis must read on any territory color, so it relies on pattern and
+  // motion, not hue alone: outlines alternate accent and near-black dashes
+  // (one of the two always contrasts), and the fill is diagonal stripes.
+  bool incoming = (flags & FLAG_INCOMING) != 0u;
+  if (border) {
+    // Dash position in screen pixels along the diagonal; incoming attacks
+    // march so they catch the eye even where the colors blend.
+    float along = (wp.x + wp.y) * uZoom + (incoming ? uTime * 24.0 : 0.0);
+    bool accentDash = mod(along, 16.0) < 9.0;
+    fragColor = accentDash ? vec4(accent, 0.95) : vec4(0.04, 0.04, 0.05, 0.95);
+    return;
+  }
+  float across = (wp.x - wp.y) * uZoom;
+  if (mod(across, 12.0) < 3.0) {
+    fragColor = vec4(accent, hovered && flags == 0u ? 0.18 : 0.28);
     return;
   }
   discard;

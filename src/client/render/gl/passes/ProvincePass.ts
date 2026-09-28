@@ -5,7 +5,9 @@
  * texture; the fragment shader draws a thin line wherever a tile's id differs
  * from its neighbor's. A small per-province flag texture marks the provinces
  * the local player is attacking (orange) or being attacked in (red), which
- * get a bold outline and a faint wash, as does the hovered province (white).
+ * get a dashed accent/black outline and diagonal stripes, as does the hovered
+ * province (white): pattern and motion keep them readable on any territory
+ * color. The red outline marches.
  * Nothing is drawn until setProvinces() provides the ids.
  */
 
@@ -39,6 +41,7 @@ export class ProvincePass {
   private uOpacity: WebGLUniformLocation;
   private uColor: WebGLUniformLocation;
   private uHighlight: WebGLUniformLocation;
+  private uTime: WebGLUniformLocation;
 
   constructor(
     gl: WebGL2RenderingContext,
@@ -54,6 +57,7 @@ export class ProvincePass {
     this.uOpacity = gl.getUniformLocation(this.program, "uOpacity")!;
     this.uColor = gl.getUniformLocation(this.program, "uColor")!;
     this.uHighlight = gl.getUniformLocation(this.program, "uHighlight")!;
+    this.uTime = gl.getUniformLocation(this.program, "uTime")!;
 
     gl.useProgram(this.program);
     gl.uniform1i(gl.getUniformLocation(this.program, "uProvinceTex"), 0);
@@ -136,6 +140,8 @@ export class ProvincePass {
     gl.uniform1f(this.uOpacity, opacity);
     gl.uniform3f(this.uColor, 0.08, 0.08, 0.1);
     gl.uniform1ui(this.uHighlight, this.highlight);
+    // Wrapped so float precision holds up in long sessions.
+    gl.uniform1f(this.uTime, (performance.now() / 1000) % 1000);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.provinceTex);
