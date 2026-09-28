@@ -65,6 +65,18 @@ export class ResourceSiteExecution implements Execution {
       owner: 0,
       heldSince: 0,
     }));
+    this.publishProvinces();
+  }
+
+  /** Tells the game which provinces still hold a resource (for the AI). */
+  private publishProvinces(): void {
+    this.mg!.setResourceProvinces(
+      new Set(
+        this.sites
+          .filter((s) => s.state !== "destroyed")
+          .map((s) => s.province),
+      ),
+    );
   }
 
   tick(ticks: number): void {
@@ -83,6 +95,7 @@ export class ResourceSiteExecution implements Execution {
     }
     if (this.dirty) {
       this.dirty = false;
+      this.publishProvinces();
       mg.addUpdate({
         type: GameUpdateType.ResourceSites,
         sites: this.sites.map((s) => ({
@@ -192,6 +205,7 @@ export class ResourceSiteExecution implements Execution {
       heldSince: site.heldSince,
     }));
     this.dirty = true;
+    this.publishProvinces();
   }
 }
 

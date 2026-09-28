@@ -61,6 +61,8 @@ export const RESOURCE_SETTINGS = {
   /** Ticks a mine must stay with one owner to gain a level (10 ticks = 1 s).
    * It drops back to level 1 when captured. */
   mineLevelUpTicks: 2 * 60 * 10,
+  /** How much more the AI wants a province holding a live resource site. */
+  aiResourceProvinceWeight: 3,
 };
 
 export interface ProvinceGenerationOptions {

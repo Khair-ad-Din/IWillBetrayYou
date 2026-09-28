@@ -9,7 +9,7 @@ barrida al 95 % (F1) y resaltado de provincias al pasar el ratón y en
 ataques (F2). El ritmo general se ralentizará cuando estas mecánicas nuevas
 hagan que falte tiempo para gestionarlo todo.
 
-## 1. Rasgos de provincia (M) — en curso, como edificios de recurso
+## 1. Rasgos de provincia (M) — hecho, como edificios de recurso
 
 Decidido: los rasgos son **edificios de recurso** colocados al azar en cada
 partida (8 % de las provincias por tipo, mínimo 2, sin máximo, nunca en
@@ -20,14 +20,15 @@ cualquier otro y una nuke los destruye para siempre. La IA les da prioridad.
 - **Granja**: las casillas del dueño en esa provincia cuentan x2 para el
   máximo de tropas.
 - **Mina**: oro fijo por tick. Empieza como una fábrica con trenes (300 por
-  tick) y sube de nivel sola cada 2 minutos en poder del mismo dueño; si la
-  conquistan, vuelve al nivel 1. Pendiente: cuánto sube por nivel y si tiene
-  tope.
+  tick) y sube de nivel sola cada 2 minutos en poder del mismo dueño (+300 por
+  nivel, sin tope); si la conquistan, vuelve al nivel 1.
 - **Puerto natural**: puerto de nivel 1 gratis, no mejorable, que no encarece
   los demás puertos; icono propio.
 
-Fase 1 (colocación e iconos) hecha; fase 2 (edificios y efectos) y fase 3
-(IA) pendientes.
+Hechas las tres fases: colocación, edificios con sus efectos y la IA, que
+puntúa x3 las provincias con recurso al elegir a cuál atacar. Los iconos son
+provisionales hasta tener los definitivos. Todas las cifras están en
+RESOURCE_SETTINGS (src/core/configuration/ProvinceConfig.ts).
 
 Idea original:
 

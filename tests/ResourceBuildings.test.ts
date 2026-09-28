@@ -86,6 +86,20 @@ describe("resource sites", () => {
     expect(unitAt(rival, UnitType.Mine, mine.tile)).toBeUndefined();
   });
 
+  test("tell the game which provinces hold a live resource", () => {
+    const all = new Set(sites.resourceSites().map((s) => s.province));
+    expect(new Set(game.resourceProvinces())).toEqual(all);
+
+    const mine = siteOf(ResourceType.Mine);
+    owner.conquer(mine.tile);
+    game.executeNextTick();
+    unitAt(owner, UnitType.Mine, mine.tile)!.delete(true, rival);
+    owner.relinquish(mine.tile);
+    game.setFallout(mine.tile, true);
+    game.executeNextTick();
+    expect(game.resourceProvinces().has(mine.province)).toBe(false);
+  });
+
   test("a building lost without a nuke frees the site again", () => {
     const mine = siteOf(ResourceType.Mine);
     owner.conquer(mine.tile);

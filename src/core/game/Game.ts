@@ -834,6 +834,9 @@ export interface Game extends GameMap {
   miniMap(): GameMap;
   /** Province layout and how many tiles of each province every owner holds. */
   provinces(): ProvinceState;
+  /** Provinces holding a resource site that has not been destroyed. */
+  resourceProvinces(): ReadonlySet<number>;
+  setResourceProvinces(provinces: ReadonlySet<number>): void;
   forEachTile(fn: (tile: TileRef) => void): void;
   // Zero-allocation neighbor iteration (cardinal only), in the same N, S, W, E
   // order as neighbors().

@@ -209,6 +209,15 @@ export class GameImpl implements Game {
     return this._provinces;
   }
 
+  // Kept by ResourceSiteExecution (which owns and snapshots the sites).
+  private _resourceProvinces: ReadonlySet<number> = new Set();
+  resourceProvinces(): ReadonlySet<number> {
+    return this._resourceProvinces;
+  }
+  setResourceProvinces(provinces: ReadonlySet<number>): void {
+    this._resourceProvinces = provinces;
+  }
+
   /** Recounts province ownership after a restore has set the tile owners. */
   rebuildProvinceOwnership(): void {
     this._provinces.rebuildOwnerCounts(this._map);

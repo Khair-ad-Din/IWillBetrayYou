@@ -1121,6 +1121,7 @@ export class AiAttackBehavior {
       this.player,
       targetSmallID,
       busy,
+      true, // go for resource sites
     );
     const tile =
       province === NO_PROVINCE

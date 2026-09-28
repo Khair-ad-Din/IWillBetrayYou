@@ -1,3 +1,4 @@
+import { RESOURCE_SETTINGS } from "../configuration/ProvinceConfig";
 import { Game, Player } from "./Game";
 import { TileRef } from "./GameMap";
 import { NO_PROVINCE } from "./Provinces";
@@ -11,7 +12,9 @@ import { NO_PROVINCE } from "./Provinces";
  * instead of leaving scraps behind.
  *
  * Provinces in `avoid` are only chosen when nothing else is available; the AI
- * passes the provinces it is already attacking so it opens new fronts.
+ * passes the provinces it is already attacking so it opens new fronts. With
+ * `preferResources` (the AI), provinces holding a live resource site score
+ * aiResourceProvinceWeight times higher.
  * Returns NO_PROVINCE when the target holds nothing next to the attacker.
  */
 export function chooseAttackProvince(
@@ -19,6 +22,7 @@ export function chooseAttackProvince(
   attacker: Player,
   targetSmallID: number,
   avoid?: ReadonlySet<number>,
+  preferResources = false,
 ): number {
   const map = game.map();
   const provinces = game.provinces();
@@ -36,6 +40,7 @@ export function chooseAttackProvince(
   });
 
   const attackerID = attacker.smallID();
+  const resourceProvinces = game.resourceProvinces();
   let best = NO_PROVINCE;
   let bestScore = -1;
   let bestAvoided = true;
@@ -44,7 +49,10 @@ export function chooseAttackProvince(
     // Any province outside `avoid` beats every avoided one.
     if (avoided && !bestAvoided) continue;
     const share = provinces.ownedBy(p, attackerID) / provinces.size(p);
-    const score = c * (1 + 2 * share);
+    let score = c * (1 + 2 * share);
+    if (preferResources && resourceProvinces.has(p)) {
+      score *= RESOURCE_SETTINGS.aiResourceProvinceWeight;
+    }
     if (
       (bestAvoided && !avoided) ||
       score > bestScore ||

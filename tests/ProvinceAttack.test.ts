@@ -1,3 +1,4 @@
+import { RESOURCE_SETTINGS } from "../src/core/configuration/ProvinceConfig";
 import { AttackExecution } from "../src/core/execution/AttackExecution";
 import { TribeSpawner } from "../src/core/execution/TribeSpawner";
 import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
@@ -341,6 +342,41 @@ describe("chooseAttackProvince", () => {
     expect(
       all.has(chooseAttackProvince(game, attacker, defender.smallID(), all)),
     ).toBe(true);
+  });
+
+  test("with preferResources, weighs provinces holding a resource", () => {
+    const { home, neighbors } = pickLayout();
+    give(attacker, home);
+    for (const p of neighbors) give(defender, p);
+    const provinces = game.provinces();
+    const contact = new Map<number, number>();
+    for (const t of provinces.tilesOf(home)) {
+      for (const nb of game.neighbors(t)) {
+        if (game.owner(nb) !== defender) continue;
+        const p = provinces.provinceOf(nb);
+        contact.set(p, (contact.get(p) ?? 0) + 1);
+      }
+    }
+    // Mark the neighbor with the least contact as holding a resource.
+    const [resourceProvince] = [...contact.entries()].sort(
+      (a, b) => a[1] - b[1] || a[0] - b[0],
+    )[0];
+    game.setResourceProvinces(new Set([resourceProvince]));
+    const weight = RESOURCE_SETTINGS.aiResourceProvinceWeight;
+    const expected = [...contact.entries()]
+      .map(([p, c]) => [p, c * (p === resourceProvince ? weight : 1)])
+      .sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
+
+    expect(
+      chooseAttackProvince(game, attacker, defender.smallID(), undefined, true),
+    ).toBe(expected);
+    // Players' own attacks are not steered by resources.
+    const plain = [...contact.entries()].sort(
+      (a, b) => b[1] - a[1] || a[0] - b[0],
+    )[0][0];
+    expect(chooseAttackProvince(game, attacker, defender.smallID())).toBe(
+      plain,
+    );
   });
 
   test("prefers finishing a province the attacker mostly holds", () => {
