@@ -25,6 +25,7 @@ function makeAttacks(n: number): AttackUpdate[] {
     troops: 1000 + i,
     id: `attack-${i}`,
     retreating: false,
+    province: 1,
   }));
 }
 

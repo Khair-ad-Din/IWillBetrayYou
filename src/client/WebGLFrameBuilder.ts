@@ -226,6 +226,8 @@ export class WebGLFrameBuilder {
   // unit colors, and SAM-radius perspective work. Push it once the local
   // player's update arrives (may take several ticks during join).
   private localPlayerSmallID = 0;
+  // Last pushed "outgoing|incoming" province lists, to skip no-op uploads.
+  private attackedProvincesKey = "";
 
   constructor(private readonly view: MapRenderer) {
     this.palette = new Float32Array(PALETTE_SIZE * 2 * 4);
@@ -299,6 +301,7 @@ export class WebGLFrameBuilder {
     this.syncPlayerEffects(gameView);
     this.syncPlayerSpawns(gameView);
     this.syncLocalPlayer(gameView);
+    this.syncAttackedProvinces(gameView);
     this.syncSpawnOverlay(gameView);
     this.syncSmallPlayerGlow(gameView);
     this.syncTerrainDeltas(gameView);
@@ -416,6 +419,21 @@ export class WebGLFrameBuilder {
       if (tiles.length === 0) continue;
       this.view.markLayerTilesDestroyed(layer.id, tiles);
     }
+  }
+
+  /** Outlines the provinces the local player is attacking / attacked in. */
+  private syncAttackedProvinces(gameView: GameView): void {
+    const me = gameView.myPlayer();
+    const provincesOf = (attacks: { province: number }[]) =>
+      [...new Set(attacks.map((a) => a.province).filter((p) => p > 0))].sort(
+        (a, b) => a - b,
+      );
+    const outgoing = me ? provincesOf(me.outgoingAttacks()) : [];
+    const incoming = me ? provincesOf(me.incomingAttacks()) : [];
+    const key = outgoing.join(",") + "|" + incoming.join(",");
+    if (key === this.attackedProvincesKey) return;
+    this.attackedProvincesKey = key;
+    this.view.setAttackedProvinces(outgoing, incoming);
   }
 
   private syncLocalPlayer(gameView: GameView): void {

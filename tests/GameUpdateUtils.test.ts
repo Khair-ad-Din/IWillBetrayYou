@@ -187,12 +187,26 @@ describe("diffPlayerUpdate", () => {
   it("detects outgoingAttacks membership/retreating changes", () => {
     const prev = makePlayerUpdate({
       outgoingAttacks: [
-        { attackerID: 1, targetID: 2, troops: 10, id: "a", retreating: false },
+        {
+          attackerID: 1,
+          targetID: 2,
+          troops: 10,
+          id: "a",
+          retreating: false,
+          province: 1,
+        },
       ],
     });
     const next = makePlayerUpdate({
       outgoingAttacks: [
-        { attackerID: 1, targetID: 2, troops: 10, id: "a", retreating: true },
+        {
+          attackerID: 1,
+          targetID: 2,
+          troops: 10,
+          id: "a",
+          retreating: true,
+          province: 1,
+        },
       ],
     });
     const diff = diffPlayerUpdate(prev, next)!;
@@ -202,12 +216,26 @@ describe("diffPlayerUpdate", () => {
   it("ignores attack troop-count changes — they travel via packedAttackUpdates", () => {
     const prev = makePlayerUpdate({
       outgoingAttacks: [
-        { attackerID: 1, targetID: 2, troops: 10, id: "a", retreating: false },
+        {
+          attackerID: 1,
+          targetID: 2,
+          troops: 10,
+          id: "a",
+          retreating: false,
+          province: 1,
+        },
       ],
     });
     const next = makePlayerUpdate({
       outgoingAttacks: [
-        { attackerID: 1, targetID: 2, troops: 20, id: "a", retreating: false },
+        {
+          attackerID: 1,
+          targetID: 2,
+          troops: 20,
+          id: "a",
+          retreating: false,
+          province: 1,
+        },
       ],
     });
     expect(diffPlayerUpdate(prev, next)).toBeNull();
@@ -266,6 +294,7 @@ describe("packAttackTroopDeltas", () => {
     troops,
     id,
     retreating,
+    province: 1,
   });
 
   it("emits [owner, direction, index, troops] quads for changed troop counts", () => {

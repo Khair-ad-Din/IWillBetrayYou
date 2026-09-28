@@ -41,6 +41,7 @@ export interface AttackData {
   troops: number;
   id: string;
   retreating: boolean;
+  province: number;
 }
 
 export interface AllianceData {

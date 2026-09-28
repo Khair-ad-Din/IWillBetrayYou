@@ -218,6 +218,7 @@ describe("GameView.update — packed channels", () => {
               troops: 500,
               id: "a1",
               retreating: false,
+              province: 1,
             },
             {
               attackerID: 1,
@@ -225,6 +226,7 @@ describe("GameView.update — packed channels", () => {
               troops: 300,
               id: "a2",
               retreating: false,
+              province: 1,
             },
           ],
           incomingAttacks: [
@@ -234,6 +236,7 @@ describe("GameView.update — packed channels", () => {
               troops: 80,
               id: "a3",
               retreating: false,
+              province: 1,
             },
           ],
         }),
@@ -275,6 +278,7 @@ describe("GameView.update — packed channels", () => {
               troops: 500,
               id: "a1",
               retreating: false,
+              province: 1,
             },
           ],
           incomingAttacks: [
@@ -284,6 +288,7 @@ describe("GameView.update — packed channels", () => {
               troops: 80,
               id: "a3",
               retreating: false,
+              province: 1,
             },
           ],
         }),
@@ -307,6 +312,7 @@ describe("GameView.update — packed channels", () => {
             troops: 450,
             id: "a1",
             retreating: false,
+            province: 1,
           },
           {
             attackerID: 1,
@@ -314,6 +320,7 @@ describe("GameView.update — packed channels", () => {
             troops: 100,
             id: "a2",
             retreating: false,
+            province: 1,
           },
         ],
       },

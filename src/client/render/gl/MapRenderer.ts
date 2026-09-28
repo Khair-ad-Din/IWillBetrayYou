@@ -45,8 +45,10 @@ export class MapRenderer {
   private layerVisibility = new Map<string, boolean>();
   private layerAlpha = new Map<string, number>();
   private layerDestroyedMasks = new Map<string, Uint8Array>();
-  // Province ids, re-uploaded after a context restore.
+  // Province state, re-uploaded after a context restore.
   private provinceIds: Uint16Array | null = null;
+  private highlightProvince = 0;
+  private attackedProvinces: [number[], number[]] = [[], []];
 
   /**
    * Called after a lost WebGL context is restored and the renderer has been
@@ -101,7 +103,11 @@ export class MapRenderer {
       this.caf,
     );
 
-    if (this.provinceIds !== null) this.renderer.setProvinces(this.provinceIds);
+    if (this.provinceIds !== null) {
+      this.renderer.setProvinces(this.provinceIds);
+      this.renderer.setHighlightProvince(this.highlightProvince);
+      this.renderer.setAttackedProvinces(...this.attackedProvinces);
+    }
 
     const rect = this.canvas.getBoundingClientRect();
     if (rect.width > 0) this.renderer.resize(rect.width, rect.height);
@@ -374,6 +380,18 @@ export class MapRenderer {
   setProvinces(ids: Uint16Array): void {
     this.provinceIds = ids;
     this.renderer?.setProvinces(ids);
+  }
+  /** Province of a tile, or 0 before provinces are set / for water. */
+  provinceAt(tile: number): number {
+    return this.provinceIds?.[tile] ?? 0;
+  }
+  setHighlightProvince(province: number): void {
+    this.highlightProvince = province;
+    this.renderer?.setHighlightProvince(province);
+  }
+  setAttackedProvinces(outgoing: number[], incoming: number[]): void {
+    this.attackedProvinces = [outgoing, incoming];
+    this.renderer?.setAttackedProvinces(outgoing, incoming);
   }
   setHighlightOwner(ownerID: number): void {
     this.renderer?.setHighlightOwner(ownerID);

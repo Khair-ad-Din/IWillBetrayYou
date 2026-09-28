@@ -1179,6 +1179,16 @@ export class GPURenderer {
     this.provincePass.setProvinces(ids);
   }
 
+  /** The province under the cursor (0 = none). */
+  setHighlightProvince(province: number): void {
+    this.provincePass.setHighlight(province);
+  }
+
+  /** Provinces the local player is attacking and being attacked in. */
+  setAttackedProvinces(outgoing: number[], incoming: number[]): void {
+    this.provincePass.setAttackedProvinces(outgoing, incoming);
+  }
+
   getSettings(): RenderSettings {
     return this.settings;
   }

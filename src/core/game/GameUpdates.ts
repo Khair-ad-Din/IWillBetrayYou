@@ -211,6 +211,8 @@ export interface AttackUpdate {
   troops: number;
   id: string;
   retreating: boolean;
+  // The province the attack is fought over (fixed for the attack's life).
+  province: number;
 }
 
 /**

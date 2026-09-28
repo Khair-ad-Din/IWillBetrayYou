@@ -1,6 +1,7 @@
 /**
- * HoverHighlightController — pushes the cursor's tile-owner to the WebGL
- * view so the territory + border passes can highlight the hovered player.
+ * HoverHighlightController — pushes the cursor's tile-owner and province to
+ * the WebGL view so the territory + border passes can highlight the hovered
+ * player and the province pass the hovered province.
  *
  * Replaces the hover path inside the renderer's MapInteraction class (which
  * was bound to the WebGL canvas; that canvas has pointer-events: none in the
@@ -19,6 +20,7 @@ import { GameView, UnitView } from "../view";
 
 export class HoverHighlightController implements Controller {
   private lastOwnerID = 0;
+  private lastProvince = 0;
 
   constructor(
     private game: GameView,
@@ -47,11 +49,15 @@ export class HoverHighlightController implements Controller {
         this.lastOwnerID = 0;
         this.view.setHighlightOwner(0);
       }
+      this.highlightProvince(0);
       return;
     }
     let ownerID = 0;
 
     const ref = this.game.ref(cell.x, cell.y);
+    this.highlightProvince(
+      this.game.isLand(ref) ? this.view.provinceAt(ref) : 0,
+    );
     if (this.game.isLand(ref)) {
       ownerID = this.game.tileState(ref) & OWNER_MASK;
     } else if (this.navalHighlightEnabled()) {
@@ -77,5 +83,11 @@ export class HoverHighlightController implements Controller {
     if (ownerID === this.lastOwnerID) return;
     this.lastOwnerID = ownerID;
     this.view.setHighlightOwner(ownerID);
+  }
+
+  private highlightProvince(province: number): void {
+    if (province === this.lastProvince) return;
+    this.lastProvince = province;
+    this.view.setHighlightProvince(province);
   }
 }

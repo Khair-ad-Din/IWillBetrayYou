@@ -29,6 +29,8 @@ describe("HoverHighlightController", () => {
     view = {
       setMouseWorldPos: vi.fn(),
       setHighlightOwner: vi.fn(),
+      setHighlightProvince: vi.fn(),
+      provinceAt: vi.fn().mockReturnValue(7),
     };
   });
 
@@ -59,6 +61,12 @@ describe("HoverHighlightController", () => {
     );
     expect(view.setMouseWorldPos).toHaveBeenCalledWith(100.5, 200.5);
     expect(view.setHighlightOwner).toHaveBeenCalledWith(player1.smallID());
+    expect(view.provinceAt).toHaveBeenCalledWith(tile);
+    expect(view.setHighlightProvince).toHaveBeenCalledWith(7);
+
+    // Moving within the same province does not re-push it.
+    handler(new MouseMoveEvent(201, 200));
+    expect(view.setHighlightProvince).toHaveBeenCalledTimes(1);
   });
 
   it("uses naval hover highlighting when tile is not land", () => {

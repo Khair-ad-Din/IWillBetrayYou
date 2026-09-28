@@ -352,6 +352,7 @@ export class PlayerImpl implements Player {
               troops: a.troops(),
               id: a.id(),
               retreating: a.retreating(),
+              province: a.province(),
             } satisfies AttackUpdate;
           });
 
@@ -366,6 +367,7 @@ export class PlayerImpl implements Player {
             troops: a.troops(),
             id: a.id(),
             retreating: a.retreating(),
+            province: a.province(),
           } satisfies AttackUpdate;
         });
       }
