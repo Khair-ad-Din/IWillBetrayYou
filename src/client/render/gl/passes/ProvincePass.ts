@@ -4,10 +4,10 @@
  * Province ids (one per tile, from core/game/Provinces) live in an R16UI
  * texture; the fragment shader draws a thin line wherever a tile's id differs
  * from its neighbor's. A small per-province flag texture marks the provinces
- * the local player is attacking (orange) or being attacked in (red), which
- * get a dashed accent/black outline and diagonal stripes, as does the hovered
- * province (white): pattern and motion keep them readable on any territory
- * color. The red outline marches.
+ * the local player is attacking (orange) or being attacked in (red). Those
+ * and the hovered province (white) get a solid accent stroke with a thin dark
+ * rim outside, which keeps them readable next to a similar territory color,
+ * and a faint wash; provinces under attack pulse.
  * Nothing is drawn until setProvinces() provides the ids.
  */
 

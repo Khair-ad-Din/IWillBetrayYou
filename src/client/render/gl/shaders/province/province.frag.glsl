@@ -58,55 +58,59 @@ void main() {
   if ((flags & FLAG_INCOMING) != 0u) accent = vec3(0.95, 0.15, 0.15);
 
   float px = 1.0 / uZoom;  // one screen pixel in world units
-  bool border;
-  if (px >= 0.5) {
-    // Zoomed out: a tile is thinner than two pixels, so mark whole tiles.
-    if (emphasized) {
-      border = outside(id, tile + ivec2(1, 0)) || outside(id, tile + ivec2(-1, 0)) ||
-               outside(id, tile + ivec2(0, 1)) || outside(id, tile + ivec2(0, -1));
-    } else {
-      // Only right/bottom, keeping plain lines one tile wide.
-      border = differs(id, tile + ivec2(1, 0)) || differs(id, tile + ivec2(0, 1));
-    }
-  } else {
-    vec2 f = wp - vec2(tile);
-    if (emphasized) {
-      float lw = min(px * 3.0, 0.5);
-      border = (f.x < lw && outside(id, tile + ivec2(-1, 0))) ||
-               (f.x > 1.0 - lw && outside(id, tile + ivec2(1, 0))) ||
-               (f.y < lw && outside(id, tile + ivec2(0, -1))) ||
-               (f.y > 1.0 - lw && outside(id, tile + ivec2(0, 1)));
-    } else {
-      float lw = px * 1.25;
-      border = (f.x < lw && differs(id, tile + ivec2(-1, 0))) ||
-               (f.x > 1.0 - lw && differs(id, tile + ivec2(1, 0))) ||
-               (f.y < lw && differs(id, tile + ivec2(0, -1))) ||
-               (f.y > 1.0 - lw && differs(id, tile + ivec2(0, 1)));
-    }
-  }
 
   if (!emphasized) {
-    if (!border) discard;
+    bool line;
+    if (px >= 0.5) {
+      // Zoomed out: a tile is thinner than two pixels, so mark whole tiles
+      // (right/bottom only, keeping lines one tile wide).
+      line = differs(id, tile + ivec2(1, 0)) || differs(id, tile + ivec2(0, 1));
+    } else {
+      vec2 f = wp - vec2(tile);
+      float lw = px * 1.25;
+      line = (f.x < lw && differs(id, tile + ivec2(-1, 0))) ||
+             (f.x > 1.0 - lw && differs(id, tile + ivec2(1, 0))) ||
+             (f.y < lw && differs(id, tile + ivec2(0, -1))) ||
+             (f.y > 1.0 - lw && differs(id, tile + ivec2(0, 1)));
+    }
+    if (!line) discard;
     fragColor = vec4(uColor, uOpacity);
     return;
   }
 
-  // Emphasis must read on any territory color, so it relies on pattern and
-  // motion, not hue alone: outlines alternate accent and near-black dashes
-  // (one of the two always contrasts), and the fill is diagonal stripes.
+  // Emphasis has to read on any territory color: a solid accent stroke with
+  // a thin dark rim on the outside separates it from a similar-colored
+  // neighbor, and provinces under attack breathe instead of relying on hue.
   bool incoming = (flags & FLAG_INCOMING) != 0u;
-  if (border) {
-    // Dash position in screen pixels along the diagonal; incoming attacks
-    // march so they catch the eye even where the colors blend.
-    float along = (wp.x + wp.y) * uZoom + (incoming ? uTime * 24.0 : 0.0);
-    bool accentDash = mod(along, 16.0) < 9.0;
-    fragColor = accentDash ? vec4(accent, 0.95) : vec4(0.04, 0.04, 0.05, 0.95);
+  float pulse = incoming ? 0.5 + 0.5 * sin(uTime * 4.0) : 1.0;
+  vec4 accentStroke = vec4(accent, incoming ? 0.55 + 0.4 * pulse : 0.95);
+  vec4 rim = vec4(0.03, 0.03, 0.04, 0.85);
+  float washAlpha = hovered && flags == 0u ? 0.10 : 0.12;
+  if (incoming) washAlpha = 0.08 + 0.12 * pulse;
+
+  if (px >= 0.5) {
+    bool edge = outside(id, tile + ivec2(1, 0)) || outside(id, tile + ivec2(-1, 0)) ||
+                outside(id, tile + ivec2(0, 1)) || outside(id, tile + ivec2(0, -1));
+    fragColor = edge ? accentStroke : vec4(accent, washAlpha);
     return;
   }
-  float across = (wp.x - wp.y) * uZoom;
-  if (mod(across, 12.0) < 3.0) {
-    fragColor = vec4(accent, hovered && flags == 0u ? 0.18 : 0.28);
-    return;
+
+  // Distance (world units) from this fragment to the nearest edge of the
+  // tile that faces outside the province.
+  vec2 f = wp - vec2(tile);
+  float d = 1.0;
+  if (outside(id, tile + ivec2(-1, 0))) d = min(d, f.x);
+  if (outside(id, tile + ivec2(1, 0))) d = min(d, 1.0 - f.x);
+  if (outside(id, tile + ivec2(0, -1))) d = min(d, f.y);
+  if (outside(id, tile + ivec2(0, 1))) d = min(d, 1.0 - f.y);
+
+  float rimW = min(px * 1.0, 0.2);
+  float strokeW = min(px * 3.0, 0.5);
+  if (d < rimW) {
+    fragColor = rim;
+  } else if (d < strokeW) {
+    fragColor = accentStroke;
+  } else {
+    fragColor = vec4(accent, washAlpha);
   }
-  discard;
 }
