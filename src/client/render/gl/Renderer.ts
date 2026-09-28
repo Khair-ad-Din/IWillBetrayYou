@@ -48,6 +48,7 @@ import { NightCompositePass } from "./passes/NightCompositePass";
 import { NukeTelegraphPass } from "./passes/NukeTelegraphPass";
 import { NukeTrajectoryPass } from "./passes/NukeTrajectoryPass";
 import { PointLightPass } from "./passes/PointLightPass";
+import { ProvincePass } from "./passes/ProvincePass";
 import { RailroadPass } from "./passes/RailroadPass";
 import { RangeCirclePass } from "./passes/RangeCirclePass";
 import { SAMRadiusPass } from "./passes/SamRadiusPass";
@@ -147,6 +148,7 @@ export class GPURenderer {
   private heatManager: HeatManager;
   private affiliationPalette: AffiliationPalette;
   private coordinateGridPass: CoordinateGridPass;
+  private provincePass: ProvincePass;
   private spawnOverlayPass: SpawnOverlayPass;
   private smallPlayerGlowPass: SmallPlayerGlowPass;
   private inSpawnPhase = false;
@@ -639,6 +641,7 @@ export class GPURenderer {
       mapH,
       this.settings,
     );
+    this.provincePass = new ProvincePass(gl, mapW, mapH, this.settings);
     try {
       this.gridView = window.localStorage.getItem(GRID_VIEW_KEY) === "true";
     } catch {
@@ -1171,6 +1174,11 @@ export class GPURenderer {
     }
   }
 
+  /** Province id per tile (core/game/Provinces), drawn as border lines. */
+  setProvinces(ids: Uint16Array): void {
+    this.provincePass.setProvinces(ids);
+  }
+
   getSettings(): RenderSettings {
     return this.settings;
   }
@@ -1361,6 +1369,8 @@ export class GPURenderer {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     this.spawnOverlayPass.draw(cam);
+    // Province lines sit under player borders, so country borders stay on top.
+    this.provincePass.draw(cam, zoom);
     if (pe.borderStamp) this.borderStampPass.draw(cam);
     if (pe.railroad) this.railroadPass.draw(cam, zoom);
     if (pe.unit) this.unitPass.drawGround(cam);
@@ -1495,6 +1505,7 @@ export class GPURenderer {
     this.heatManager.dispose();
     this.affiliationPalette.dispose();
     this.coordinateGridPass.dispose();
+    this.provincePass.dispose();
     this.spawnOverlayPass.dispose();
     this.smallPlayerGlowPass.dispose();
     this.railroadPass.dispose();

@@ -13,6 +13,7 @@ import {
   ServerMessage,
 } from "../core/Schemas";
 import { findClosestBy, replacer } from "../core/Util";
+import { provinceGenerationOptions } from "../core/configuration/ProvinceConfig";
 import {
   BuildableUnit,
   PlayerType,
@@ -27,6 +28,7 @@ import {
   GameUpdateViewData,
   HashUpdate,
 } from "../core/game/GameUpdates";
+import { generateProvinces } from "../core/game/Provinces";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import {
   GRAPHICS_KEY,
@@ -747,6 +749,13 @@ async function createClientGame(
       config,
       resolveRenderSettings(),
     );
+
+    const provinces = generateProvinces(
+      gameMap.gameMap,
+      provinceGenerationOptions(lobbyConfig.gameStartInfo.config.gameMapSize),
+    );
+    view.setProvinces(provinces.ids);
+    console.log(`Provinces: ${provinces.count}`);
 
     const graphicsListenerAbort = new AbortController();
 

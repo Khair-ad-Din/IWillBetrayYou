@@ -81,6 +81,7 @@
     "territorySaturation": 0.85,
     "territoryAlpha": 0.588,
     "coordinateGridOpacity": 0.5,
+    "provinceBorderOpacity": 0.35,
     "staleNukeBase": 0,
     "staleNukeVariation": 0.05,
     "staleNukeAlpha": 1,

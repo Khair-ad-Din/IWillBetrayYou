@@ -142,6 +142,8 @@ export interface RenderSettings {
     /** Absolute opacity of the territory fill. 1 = fully opaque (terrain hidden), ~0.588 = default. */
     territoryAlpha: number;
     coordinateGridOpacity: number;
+    /** Opacity of the province border lines drawn over the map. */
+    provinceBorderOpacity: number;
     staleNukeBase: number;
     staleNukeVariation: number;
     staleNukeAlpha: number;

@@ -45,6 +45,8 @@ export class MapRenderer {
   private layerVisibility = new Map<string, boolean>();
   private layerAlpha = new Map<string, number>();
   private layerDestroyedMasks = new Map<string, Uint8Array>();
+  // Province ids, re-uploaded after a context restore.
+  private provinceIds: Uint16Array | null = null;
 
   /**
    * Called after a lost WebGL context is restored and the renderer has been
@@ -98,6 +100,8 @@ export class MapRenderer {
       this.raf,
       this.caf,
     );
+
+    if (this.provinceIds !== null) this.renderer.setProvinces(this.provinceIds);
 
     const rect = this.canvas.getBoundingClientRect();
     if (rect.width > 0) this.renderer.resize(rect.width, rect.height);
@@ -366,6 +370,10 @@ export class MapRenderer {
   }
   setGridView(active: boolean): void {
     this.renderer?.setGridView(active);
+  }
+  setProvinces(ids: Uint16Array): void {
+    this.provinceIds = ids;
+    this.renderer?.setProvinces(ids);
   }
   setHighlightOwner(ownerID: number): void {
     this.renderer?.setHighlightOwner(ownerID);
