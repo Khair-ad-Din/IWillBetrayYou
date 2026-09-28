@@ -30,6 +30,7 @@ import type {
   TerrainRect,
   UnitState,
 } from "../types";
+import type { ResourceSiteIcon } from "./passes/ResourceSitePass";
 import type { SpawnCenter } from "./passes/SpawnOverlayPass";
 import type { AttackTroopLabel } from "./passes/WorldTextPass";
 import { GPURenderer } from "./Renderer";
@@ -49,6 +50,8 @@ export class MapRenderer {
   private provinceIds: Uint16Array | null = null;
   private highlightProvince = 0;
   private attackedProvinces: [number[], number[]] = [[], []];
+  private resourceSites: ResourceSiteIcon[] = [];
+  private resourceSitesVisible = false;
 
   /**
    * Called after a lost WebGL context is restored and the renderer has been
@@ -108,6 +111,8 @@ export class MapRenderer {
       this.renderer.setHighlightProvince(this.highlightProvince);
       this.renderer.setAttackedProvinces(...this.attackedProvinces);
     }
+    this.renderer.setResourceSites(this.resourceSites);
+    this.renderer.setResourceSitesVisible(this.resourceSitesVisible);
 
     const rect = this.canvas.getBoundingClientRect();
     if (rect.width > 0) this.renderer.resize(rect.width, rect.height);
@@ -392,6 +397,15 @@ export class MapRenderer {
   setAttackedProvinces(outgoing: number[], incoming: number[]): void {
     this.attackedProvinces = [outgoing, incoming];
     this.renderer?.setAttackedProvinces(outgoing, incoming);
+  }
+  setResourceSites(sites: ResourceSiteIcon[]): void {
+    this.resourceSites = sites;
+    this.renderer?.setResourceSites(sites);
+  }
+  setResourceSitesVisible(visible: boolean): void {
+    if (visible === this.resourceSitesVisible) return;
+    this.resourceSitesVisible = visible;
+    this.renderer?.setResourceSitesVisible(visible);
   }
   setHighlightOwner(ownerID: number): void {
     this.renderer?.setHighlightOwner(ownerID);

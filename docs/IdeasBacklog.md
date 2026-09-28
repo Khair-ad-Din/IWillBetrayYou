@@ -9,7 +9,27 @@ barrida al 95 % (F1) y resaltado de provincias al pasar el ratón y en
 ataques (F2). El ritmo general se ralentizará cuando estas mecánicas nuevas
 hagan que falte tiempo para gestionarlo todo.
 
-## 1. Rasgos de provincia (M)
+## 1. Rasgos de provincia (M) — en curso, como edificios de recurso
+
+Decidido: los rasgos son **edificios de recurso** colocados al azar en cada
+partida (8 % de las provincias por tipo, mínimo 2, sin máximo, nunca en
+provincias vecinas ni en islas diminutas, ocultos durante la elección de
+territorio). Quien conquista su casilla recibe el edificio; se capturan como
+cualquier otro y una nuke los destruye para siempre. La IA les da prioridad.
+
+- **Granja**: las casillas del dueño en esa provincia cuentan x2 para el
+  máximo de tropas.
+- **Mina**: oro fijo por tick. Empieza como una fábrica con trenes (300 por
+  tick) y sube de nivel sola cada 2 minutos en poder del mismo dueño; si la
+  conquistan, vuelve al nivel 1. Pendiente: cuánto sube por nivel y si tiene
+  tope.
+- **Puerto natural**: puerto de nivel 1 gratis, no mejorable, que no encarece
+  los demás puertos; icono propio.
+
+Fase 1 (colocación e iconos) hecha; fase 2 (edificios y efectos) y fase 3
+(IA) pendientes.
+
+Idea original:
 
 Cada provincia tiene un rasgo visible, por ejemplo:
 

@@ -51,6 +51,7 @@ import { PointLightPass } from "./passes/PointLightPass";
 import { ProvincePass } from "./passes/ProvincePass";
 import { RailroadPass } from "./passes/RailroadPass";
 import { RangeCirclePass } from "./passes/RangeCirclePass";
+import { ResourceSiteIcon, ResourceSitePass } from "./passes/ResourceSitePass";
 import { SAMRadiusPass } from "./passes/SamRadiusPass";
 import { SelectionBoxPass } from "./passes/SelectionBoxPass";
 import { SkinAtlasArray } from "./passes/SkinAtlasArray";
@@ -149,6 +150,7 @@ export class GPURenderer {
   private affiliationPalette: AffiliationPalette;
   private coordinateGridPass: CoordinateGridPass;
   private provincePass: ProvincePass;
+  private resourceSitePass: ResourceSitePass;
   private spawnOverlayPass: SpawnOverlayPass;
   private smallPlayerGlowPass: SmallPlayerGlowPass;
   private inSpawnPhase = false;
@@ -642,6 +644,7 @@ export class GPURenderer {
       this.settings,
     );
     this.provincePass = new ProvincePass(gl, mapW, mapH, this.settings);
+    this.resourceSitePass = new ResourceSitePass(gl);
     try {
       this.gridView = window.localStorage.getItem(GRID_VIEW_KEY) === "true";
     } catch {
@@ -1189,6 +1192,15 @@ export class GPURenderer {
     this.provincePass.setAttackedProvinces(outgoing, incoming);
   }
 
+  setResourceSites(sites: ResourceSiteIcon[]): void {
+    this.resourceSitePass.setSites(sites);
+  }
+
+  /** Resource sites stay hidden while players pick where to spawn. */
+  setResourceSitesVisible(visible: boolean): void {
+    this.resourceSitePass.setVisible(visible);
+  }
+
   getSettings(): RenderSettings {
     return this.settings;
   }
@@ -1391,6 +1403,7 @@ export class GPURenderer {
     this.crosshairPass.draw(cam);
     if (pe.structure) this.structurePass.draw(cam, zoom);
     if (pe.structure) this.structureLevelPass.draw(cam, zoom);
+    this.resourceSitePass.draw(cam, zoom);
     // Small-player glow draws after structures so buildings can't hide it.
     this.smallPlayerGlowPass.draw(cam);
     if (pe.bar) this.barPass.draw(cam);
@@ -1516,6 +1529,7 @@ export class GPURenderer {
     this.affiliationPalette.dispose();
     this.coordinateGridPass.dispose();
     this.provincePass.dispose();
+    this.resourceSitePass.dispose();
     this.spawnOverlayPass.dispose();
     this.smallPlayerGlowPass.dispose();
     this.railroadPass.dispose();

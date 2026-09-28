@@ -41,6 +41,20 @@ export const PROVINCE_SETTINGS = {
   captureThreshold: 0.95,
 };
 
+/**
+ * Resource sites (farm, mine, natural harbor): where they spawn. Each game
+ * places them at random (seeded from the game id), so players cannot learn
+ * them by heart.
+ */
+export const RESOURCE_SETTINGS = {
+  /** Fraction of the eligible provinces that get each resource type. */
+  sharePerType: 0.08,
+  /** At least this many sites of each type, however small the map. */
+  minPerType: 2,
+  /** Provinces smaller than this (tiny islands) never get a resource. */
+  minProvinceTiles: 500,
+};
+
 export interface ProvinceGenerationOptions {
   /** Average land tiles per province for this map size. */
   targetSize: number;

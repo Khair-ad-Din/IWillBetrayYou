@@ -463,6 +463,8 @@ export class WebGLFrameBuilder {
    */
   private syncSpawnOverlay(gameView: GameView): void {
     const inSpawnPhase = gameView.inSpawnPhase();
+    // Resource sites must not help anyone pick a spawn.
+    this.view.setResourceSitesVisible(!inSpawnPhase);
     // Past the spawn phase only the local ring can stay up (the tutorial
     // keeps it while a new player finds their territory).
     if (!inSpawnPhase && !gameView.ownSpawnRing()) {
