@@ -22,6 +22,11 @@ services:
       # Must match between nginx (generate-nginx-upstream.sh) and the server.
       - key: NUM_WORKERS
         value: "1"
+      # Must be an absolute origin: the game worker is a Blob, so a relative
+      # "/_assets/maps/..." URL cannot be resolved there and the map fetch
+      # fails ("Worker initialization timeout"). Assets are served same-origin.
+      - key: CDN_BASE
+        value: https://iwillbetrayyou.onrender.com
       # Cloudflare's public test site key (always passes).
       - key: TURNSTILE_SITE_KEY
         value: 1x00000000000000000000AA
