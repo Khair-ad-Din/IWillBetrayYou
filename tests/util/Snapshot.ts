@@ -144,6 +144,9 @@ export const DERIVED_FIELDS = new Set<string>([
   "unitCountMemo",
   "unitsByTypeMemo",
   "borderNbuf",
+  // ProvinceState: rebuilt from tile owners on restore, so its Map order
+  // differs; the counts themselves are checked in tests/ProvinceState.test.ts.
+  "ownerCounts",
   // PlayerImpl
   "lastSentUpdate",
   "myUnitsMemo",

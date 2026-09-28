@@ -2,6 +2,7 @@ import { z } from "zod";
 import { renderNumber } from "../../client/Utils";
 import { UnitView } from "../../client/view";
 import { Config } from "../configuration/Config";
+import { provinceGenerationOptions } from "../configuration/ProvinceConfig";
 import {
   SharedWaterCache,
   SharedWaterCacheSnapshot,
@@ -68,6 +69,8 @@ import { GameMap, TileRef } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
 import { MotionPlanRecord, packMotionPlans } from "./MotionPlans";
 import { PlayerImpl } from "./PlayerImpl";
+import { generateProvinces, ProvinceMap } from "./Provinces";
+import { ProvinceState } from "./ProvinceState";
 import { RailNetwork } from "./RailNetwork";
 import {
   createRailNetwork,
@@ -115,6 +118,7 @@ export class GameImpl implements Game {
   private execs: Execution[] = [];
   private _width: number;
   private _height: number;
+  private _provinces: ProvinceState;
   _terraNullius: TerraNulliusImpl;
 
   allianceRequests: AllianceRequestImpl[] = [];
@@ -163,8 +167,19 @@ export class GameImpl implements Game {
     // Restoring a snapshot: skip team and player setup, the snapshot
     // supplies both (see restoreState).
     restoring: boolean = false,
+    // Provinces of the pristine map. Generated here when omitted; a restore
+    // passes them in because the map it hands over is already mutated.
+    provinces?: ProvinceMap,
   ) {
     const constructorStart = performance.now();
+    this._provinces = new ProvinceState(
+      provinces ??
+        generateProvinces(
+          _map,
+          provinceGenerationOptions(_config.gameConfig().gameMapSize),
+        ),
+      _map,
+    );
 
     this._teamGameSpawnAreas = teamGameSpawnAreas;
     this._terraNullius = new TerraNulliusImpl();
@@ -188,6 +203,15 @@ export class GameImpl implements Game {
     console.log(
       `[GameImpl] Constructor total: ${(performance.now() - constructorStart).toFixed(0)}ms`,
     );
+  }
+
+  provinces(): ProvinceState {
+    return this._provinces;
+  }
+
+  /** Recounts province ownership after a restore has set the tile owners. */
+  rebuildProvinceOwnership(): void {
+    this._provinces.rebuildOwnerCounts(this._map);
   }
 
   private populateTeams() {
@@ -811,6 +835,11 @@ export class GameImpl implements Game {
       previousOwner._borderTiles.delete(tile);
     }
     this._territoryVersion++;
+    this._provinces.onOwnerChange(
+      tile,
+      this._map.ownerID(tile),
+      owner.smallID(),
+    );
     this._map.setOwnerID(tile, owner.smallID());
     owner._tiles.add(tile);
     owner._lastTileChange = this._ticks;
@@ -835,6 +864,7 @@ export class GameImpl implements Game {
     previousOwner._borderTiles.delete(tile);
 
     this._territoryVersion++;
+    this._provinces.onOwnerChange(tile, this._map.ownerID(tile), 0);
     this._map.setOwnerID(tile, 0);
     this.updateBorders(tile);
     this.recordTileUpdate(tile);

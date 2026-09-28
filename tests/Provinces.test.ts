@@ -24,6 +24,7 @@ const OPTS: ProvinceGenerationOptions = {
   targetSize: 1000,
   minProvinces: 1,
   maxProvinces: 10_000,
+  minTilesPerProvince: 1,
   minProvinceFraction: 0.25,
   plainsCost: 1,
   highlandCost: 2,
@@ -149,7 +150,7 @@ describe("generateProvinces", () => {
     }
   });
 
-  test("a big island gets its own provinces, a tiny one joins its nearest neighbor", async () => {
+  test("islands get their own provinces and no province spans water", async () => {
     // Mainland on the left, a big island on the right, a 2x2 islet between.
     const map = await buildMap(200, 100, (x, y) => {
       if (x < 90) return PLAINS;
@@ -172,9 +173,20 @@ describe("generateProvinces", () => {
 
     const islet = p.ids[map.ref(110, 50)];
     expect(islet).not.toBe(NO_PROVINCE);
-    // Too small to stand alone: it belongs to a province that also has land
-    // elsewhere.
-    expect(p.sizes[islet]).toBeGreaterThan(4);
+    expect(p.sizes[islet]).toBe(4);
+
+    const components = componentsPerProvince(map, p);
+    for (let id = 1; id <= p.count; id++) expect(components[id]).toBe(1);
+  });
+
+  test("tiny maps are not split below minTilesPerProvince", async () => {
+    const map = await buildMap(20, 20, () => PLAINS);
+    const p = generateProvinces(map, {
+      ...OPTS,
+      minProvinces: 40,
+      minTilesPerProvince: 400,
+    });
+    expect(p.count).toBe(1);
   });
 
   test("handles maps without land", async () => {

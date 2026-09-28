@@ -106,11 +106,16 @@ describe("snapshot: transport ships", () => {
     );
     executeTicks(game, 2);
     const defender = game.player("defender");
-    game.addExecution(
-      new AttackExecution(100, defender, game.terraNullius().id()),
-    );
-    game.executeNextTick();
-    while (defender.outgoingAttacks().length > 0) game.executeNextTick();
+    // Each attack takes one province: keep expanding until the land runs out.
+    let tiles = -1;
+    while (defender.numTilesOwned() !== tiles) {
+      tiles = defender.numTilesOwned();
+      game.addExecution(
+        new AttackExecution(100, defender, game.terraNullius().id()),
+      );
+      game.executeNextTick();
+      while (defender.outgoingAttacks().length > 0) game.executeNextTick();
+    }
     return { game, defender };
   }
 

@@ -152,7 +152,8 @@ describe("TribeSpawner", () => {
   });
 
   test("failed positioned tribe is NOT spawned randomly", async () => {
-    const game = await setup("half_land_half_ocean", {
+    // Large enough for three provinces: tribes spawn at most one per province.
+    const game = await setup("plains", {
       bots: 3,
       gameMap: GameMapType.Asia,
     });

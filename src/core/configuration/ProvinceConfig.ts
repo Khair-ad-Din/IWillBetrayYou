@@ -17,6 +17,11 @@ export const PROVINCE_SETTINGS = {
   minProvinces: 40,
   maxProvinces: 800,
   /**
+   * No province is made smaller than this on average, even if that leaves a
+   * tiny map with fewer than minProvinces provinces.
+   */
+  minTilesPerProvince: 500,
+  /**
    * Provinces (and seedless land such as islands) smaller than this fraction
    * of the target size are merged into a neighbor.
    */
@@ -28,6 +33,12 @@ export const PROVINCE_SETTINGS = {
   plainsCost: 1,
   highlandCost: 2,
   mountainCost: 4,
+  /**
+   * An attack captures its target province once the attacker holds this
+   * fraction of the tiles contested with the defender there: the defender's
+   * remaining tiles in the province then flip at once and the attack ends.
+   */
+  captureThreshold: 0.8,
 };
 
 export interface ProvinceGenerationOptions {
@@ -35,6 +46,7 @@ export interface ProvinceGenerationOptions {
   targetSize: number;
   minProvinces: number;
   maxProvinces: number;
+  minTilesPerProvince: number;
   minProvinceFraction: number;
   plainsCost: number;
   highlandCost: number;
@@ -51,6 +63,7 @@ export function provinceGenerationOptions(
     targetSize: Math.max(1, Math.round(settings.tilesPerProvince * multiplier)),
     minProvinces: settings.minProvinces,
     maxProvinces: settings.maxProvinces,
+    minTilesPerProvince: settings.minTilesPerProvince,
     minProvinceFraction: settings.minProvinceFraction,
     plainsCost: settings.plainsCost,
     highlandCost: settings.highlandCost,

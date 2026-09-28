@@ -673,6 +673,9 @@ export const AttackIntentSchema = z.object({
   type: z.literal("attack"),
   targetID: MappedID.nullable(),
   troops: zb.float({ min: 0 }).nullable(),
+  // The tile aimed at; the attack is fought over its province. Without it the
+  // target's province with the longest shared border is attacked.
+  tile: zb.uint().nullable().optional(),
 });
 
 export const SpawnIntentSchema = z.object({

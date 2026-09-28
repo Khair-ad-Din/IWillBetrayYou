@@ -93,6 +93,9 @@ export class SendAttackIntentEvent implements GameEvent {
   constructor(
     public readonly targetID: PlayerID | null,
     public readonly troops: number,
+    // The tile aimed at, whose province is attacked; null picks the target's
+    // province with the longest shared border.
+    public readonly tile: TileRef | null = null,
   ) {}
 }
 
@@ -796,6 +799,7 @@ export class Transport {
       type: "attack",
       targetID: event.targetID,
       troops: event.troops,
+      tile: event.tile,
     });
   }
 

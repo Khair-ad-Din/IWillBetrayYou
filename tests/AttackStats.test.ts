@@ -139,12 +139,17 @@ function expectWarGoldStatIsIncreasedAfterKill(
 }
 
 function performAttack(game: Game, attacker: Player, defender: Player) {
-  // Execute the attack
-  game.addExecution(
-    new AttackExecution(attacker.troops(), attacker, defender.id()),
-  );
-  // Wait for the attack to complete
-  do {
-    game.executeNextTick();
-  } while (attacker.outgoingAttacks().length > 0);
+  // Each attack takes one province: attack again until the defender falls or
+  // an attack makes no progress.
+  let defenderTiles = -1;
+  while (defender.isAlive() && defender.numTilesOwned() !== defenderTiles) {
+    defenderTiles = defender.numTilesOwned();
+    game.addExecution(
+      new AttackExecution(attacker.troops(), attacker, defender.id()),
+    );
+    // Wait for the attack to complete
+    do {
+      game.executeNextTick();
+    } while (attacker.outgoingAttacks().length > 0);
+  }
 }

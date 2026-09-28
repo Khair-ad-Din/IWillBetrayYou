@@ -15,6 +15,7 @@ import { Attack, Player, TerraNullius } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { TileRef } from "./GameMap";
 import { PlayerImpl } from "./PlayerImpl";
+import { NO_PROVINCE } from "./Provinces";
 
 export class AttackImpl implements Attack {
   private _isActive = true;
@@ -30,10 +31,15 @@ export class AttackImpl implements Attack {
     private _sourceTile: TileRef | null,
     private _border: Set<number>,
     private _mg: GameImpl,
+    private _province: number = NO_PROVINCE,
   ) {}
 
   sourceTile(): TileRef | null {
     return this._sourceTile;
+  }
+
+  province(): number {
+    return this._province;
   }
 
   target(): Player | TerraNullius {
@@ -203,6 +209,7 @@ export class AttackImpl implements Attack {
       attacker: w.player(this._attacker),
       troops: this._troops,
       sourceTile: this._sourceTile,
+      province: this._province,
       border: w.tiles(this._border),
       borderSize: this._borderSize,
       isActive: this._isActive,
@@ -219,6 +226,7 @@ export class AttackImpl implements Attack {
     this._attacker = r.player(s.attacker);
     this._troops = s.troops;
     this._sourceTile = s.sourceTile;
+    this._province = s.province;
     this._border = new Set(s.border);
     this._borderSize = s.borderSize;
     this._isActive = s.isActive;
@@ -229,13 +237,18 @@ export class AttackImpl implements Attack {
 
 export const AttackSnapshot = snapshotType({
   name: "Attack",
-  version: 1,
+  version: 2,
+  migrations: {
+    // v2 adds the attack's province; older attacks were not province-bound.
+    1: (d) => ({ ...d, province: NO_PROVINCE }),
+  },
   schema: z.object({
     id: z.string(),
     target: zPlayerRef(),
     attacker: zPlayerRef(),
     troops: zNum(),
     sourceTile: zTile().nullable(),
+    province: zInt(),
     border: zTiles(),
     borderSize: zInt(),
     isActive: z.boolean(),

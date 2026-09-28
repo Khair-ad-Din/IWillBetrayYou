@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { renderTroops } from "../../client/Utils";
 import { AttackLogicInput } from "../configuration/Config";
+import { PROVINCE_SETTINGS } from "../configuration/ProvinceConfig";
 import {
   Attack,
   Difficulty,
@@ -15,6 +16,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
+import { NO_PROVINCE } from "../game/Provinces";
 import { PseudoRandom } from "../PseudoRandom";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
 import type {
@@ -35,6 +37,8 @@ import { assertNever } from "../Util";
 import { FlatBinaryHeap } from "./utils/FlatBinaryHeap"; // adjust path if needed
 
 const malusForRetreat = 25;
+// Province of an attack with nothing to fight over: it matches no tile.
+const UNREACHABLE_PROVINCE = -1;
 export class AttackExecution implements Execution {
   private active: boolean = true;
   private toConquer = new FlatBinaryHeap();
@@ -49,6 +53,10 @@ export class AttackExecution implements Execution {
 
   private attack: Attack | null = null;
 
+  // The province this attack is fought over. NO_PROVINCE only for attacks
+  // restored from snapshots taken before provinces existed: unrestricted.
+  private province: number = NO_PROVINCE;
+
   // Cached smallIDs for integer owner comparisons in hot loops.
   private ownerSmallID: number;
   private targetSmallID: number;
@@ -62,6 +70,8 @@ export class AttackExecution implements Execution {
     private _targetID: PlayerID | null,
     private sourceTile: TileRef | null = null,
     private removeTroops: boolean = true,
+    // The tile the player aimed at; its province becomes the attack's target.
+    private targetTile: TileRef | null = null,
   ) {}
 
   public targetID(): PlayerID | null {
@@ -127,6 +137,14 @@ export class AttackExecution implements Execution {
       return;
     }
 
+    this.province = this.resolveProvince();
+    if (this.province === NO_PROVINCE) {
+      // Nothing of the target's to fight over along our border. The attack
+      // still launches (it can cancel out an incoming one), finds no tiles
+      // and returns its troops on the next tick.
+      this.province = UNREACHABLE_PROVINCE;
+    }
+
     this.startTroops ??= this.mg
       .config()
       .attackAmount(this._owner, this.target);
@@ -143,6 +161,7 @@ export class AttackExecution implements Execution {
       this.startTroops,
       this.sourceTile,
       new Set<TileRef>(),
+      this.province,
     );
 
     if (this.sourceTile !== null) {
@@ -172,6 +191,8 @@ export class AttackExecution implements Execution {
       if (
         outgoing !== this.attack &&
         outgoing.target() === this.attack.target() &&
+        // Attacks on different provinces are separate fronts.
+        outgoing.province() === this.province &&
         // Boat attacks (sourceTile is not null) are not combined with other attacks
         this.attack.sourceTile() === null
       ) {
@@ -339,7 +360,87 @@ export class AttackExecution implements Execution {
       }
       this._owner.conquer(tileToConquer);
       this.handleDeadDefender();
+      this.captureProvinceIfHeld();
     }
+  }
+
+  /**
+   * The province for this attack: the one the player aimed at, the one a
+   * boat landed in, or else the target's province with the longest border
+   * against us. NO_PROVINCE when the target holds nothing next to us.
+   */
+  private resolveProvince(): number {
+    const provinces = this.mg.provinces();
+    for (const tile of [this.targetTile, this.sourceTile]) {
+      if (tile === null) continue;
+      const p = provinces.provinceOf(tile);
+      if (p !== NO_PROVINCE && provinces.ownedBy(p, this.targetSmallID) > 0) {
+        return p;
+      }
+    }
+    if (this.sourceTile !== null) {
+      // A boat landing on a province border: take the target's province
+      // right next to the landing tile.
+      const n = this.map.neighbors4(this.sourceTile, this.nbuf);
+      for (let i = 0; i < n; i++) {
+        const nb = this.nbuf[i];
+        if (this.map.ownerID(nb) === this.targetSmallID) {
+          const p = provinces.provinceOf(nb);
+          if (p !== NO_PROVINCE) return p;
+        }
+      }
+    }
+
+    const contact = new Map<number, number>();
+    this._owner.borderTiles().forEach((tile) => {
+      const n = this.map.neighbors4(tile, this.nbuf);
+      for (let i = 0; i < n; i++) {
+        const nb = this.nbuf[i];
+        if (this.map.ownerID(nb) !== this.targetSmallID) continue;
+        const p = provinces.provinceOf(nb);
+        if (p !== NO_PROVINCE) contact.set(p, (contact.get(p) ?? 0) + 1);
+      }
+    });
+    let best = NO_PROVINCE;
+    let bestContact = 0;
+    for (const [p, c] of contact) {
+      if (c > bestContact || (c === bestContact && p < best)) {
+        best = p;
+        bestContact = c;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * Once the attacker holds captureThreshold of the tiles it and the target
+   * hold in the province, the target's remaining tiles there flip at once.
+   * The attack then runs out of tiles and returns its troops.
+   */
+  private captureProvinceIfHeld() {
+    if (this.province <= NO_PROVINCE || !this.active) return;
+    const provinces = this.mg.provinces();
+    const defenderHeld = provinces.ownedBy(this.province, this.targetSmallID);
+    if (defenderHeld === 0) return;
+    const attackerHeld = provinces.ownedBy(this.province, this.ownerSmallID);
+    if (
+      attackerHeld <
+      PROVINCE_SETTINGS.captureThreshold * (attackerHeld + defenderHeld)
+    ) {
+      return;
+    }
+    const tiles = provinces.tilesOf(this.province);
+    for (let i = 0; i < tiles.length; i++) {
+      const t = tiles[i];
+      if (
+        this.map.ownerID(t) === this.targetSmallID &&
+        this.map.isLand(t) &&
+        !this.map.isImpassable(t)
+      ) {
+        this._owner.conquer(t);
+      }
+    }
+    this.handleDeadDefender();
   }
 
   private attackLogicInput(
@@ -408,7 +509,9 @@ export class AttackExecution implements Execution {
       if (
         this.map.isWater(neighbor) ||
         this.map.isImpassable(neighbor) ||
-        this.map.ownerID(neighbor) !== this.targetSmallID
+        this.map.ownerID(neighbor) !== this.targetSmallID ||
+        (this.province !== NO_PROVINCE &&
+          this.mg.provinces().provinceOf(neighbor) !== this.province)
       ) {
         continue;
       }
@@ -502,6 +605,8 @@ export class AttackExecution implements Execution {
       targetID: this._targetID,
       sourceTile: this.sourceTile,
       removeTroops: this.removeTroops,
+      targetTile: this.targetTile,
+      province: this.province,
     });
   }
 
@@ -528,6 +633,8 @@ export class AttackExecution implements Execution {
     this._targetID = s.targetID;
     this.sourceTile = s.sourceTile;
     this.removeTroops = s.removeTroops;
+    this.targetTile = s.targetTile;
+    this.province = s.province;
   }
 }
 
@@ -552,12 +659,18 @@ const AttackExecutionStateSchema = z.object({
   targetID: z.string().nullable(),
   sourceTile: zTile().nullable(),
   removeTroops: z.boolean(),
+  targetTile: zTile().nullable(),
+  province: zInt(),
 });
 type AttackExecutionState = z.infer<typeof AttackExecutionStateSchema>;
 
 export const AttackExecutionSnapshot = execSnapshotType({
   name: "Attack",
-  version: 1,
+  version: 2,
+  migrations: {
+    // v2 binds attacks to a province; older attacks stay unrestricted.
+    1: (d) => ({ ...d, targetTile: null, province: NO_PROVINCE }),
+  },
   schema: AttackExecutionStateSchema,
   cls: () => AttackExecution,
 });

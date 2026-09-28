@@ -12,6 +12,7 @@ import {
   UnitUpdate,
 } from "./GameUpdates";
 import { MotionPlanRecord } from "./MotionPlans";
+import type { ProvinceState } from "./ProvinceState";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 import { ReadonlyTileSet } from "./TileSet";
@@ -404,6 +405,8 @@ export interface Attack {
   delete(): void;
   // The tile the attack originated from, mostly used for boat attacks.
   sourceTile(): TileRef | null;
+  // The province the attack is fought over (NO_PROVINCE until resolved).
+  province(): number;
   addBorderTile(tile: TileRef): void;
   removeBorderTile(tile: TileRef): void;
   clearBorder(): void;
@@ -761,6 +764,7 @@ export interface Player {
 
   // Attacking.
   canAttack(tile: TileRef): boolean;
+  bordersProvince(province: number, ownerSmallID: number): boolean;
   canAttackPlayer(player: Player, treatAFKFriendly?: boolean): boolean;
   isImmune(): boolean;
 
@@ -769,6 +773,7 @@ export interface Player {
     troops: number,
     sourceTile: TileRef | null,
     border: Set<number>,
+    province?: number,
   ): Attack;
   outgoingAttacks(): Attack[];
   incomingAttacks(): Attack[];
@@ -792,6 +797,8 @@ export interface Game extends GameMap {
   height(): number;
   map(): GameMap;
   miniMap(): GameMap;
+  /** Province layout and how many tiles of each province every owner holds. */
+  provinces(): ProvinceState;
   forEachTile(fn: (tile: TileRef) => void): void;
   // Zero-allocation neighbor iteration (cardinal only), in the same N, S, W, E
   // order as neighbors().

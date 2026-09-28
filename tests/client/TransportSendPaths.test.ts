@@ -174,7 +174,7 @@ describe("Transport send paths", () => {
     it("turns bus intent events into intent frames the server can decode", () => {
       const { eventBus, ws } = connected();
       eventBus.emit(new SendSpawnIntentEvent(123));
-      eventBus.emit(new SendAttackIntentEvent("player01", 50));
+      eventBus.emit(new SendAttackIntentEvent("player01", 50, 77));
       eventBus.emit(
         new SendDonateGoldIntentEvent(
           { id: () => "player02" } as unknown as PlayerView,
@@ -187,7 +187,12 @@ describe("Transport send paths", () => {
         { type: "intent", intent: { type: "spawn", tile: 123 } },
         {
           type: "intent",
-          intent: { type: "attack", targetID: "player01", troops: 50 },
+          intent: {
+            type: "attack",
+            targetID: "player01",
+            troops: 50,
+            tile: 77,
+          },
         },
         {
           type: "intent",

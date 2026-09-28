@@ -64,7 +64,7 @@ import {
   UnitType,
 } from "./Game";
 import { GameImpl } from "./GameImpl";
-import { andFN, manhattanDistFN, TileRef } from "./GameMap";
+import { manhattanDistFN, TileRef } from "./GameMap";
 import {
   AllianceView,
   AttackUpdate,
@@ -77,6 +77,7 @@ import {
   diffPlayerUpdate,
   packAttackTroopDeltas,
 } from "./GameUpdateUtils";
+import { NO_PROVINCE } from "./Provinces";
 import { ReadonlyTileSet, TileSet } from "./TileSet";
 import {
   bumpTraversalGeneration,
@@ -1881,6 +1882,7 @@ export class PlayerImpl implements Player {
     troops: number,
     sourceTile: TileRef | null,
     border: Set<number>,
+    province: number = NO_PROVINCE,
   ): Attack {
     const attack = new AttackImpl(
       this._pseudo_random.nextID(),
@@ -1890,6 +1892,7 @@ export class PlayerImpl implements Player {
       sourceTile,
       border,
       this.mg,
+      province,
     );
     this._outgoingAttacks.push(attack);
     if (target.isPlayer()) {
@@ -1938,24 +1941,35 @@ export class PlayerImpl implements Player {
     if (!this.mg.isLand(tile) || this.mg.isImpassable(tile)) {
       return false;
     }
-    if (this.mg.hasOwner(tile)) {
-      return this.sharesBorderWith(owner);
-    } else {
-      for (const t of this.mg.bfs(
-        tile,
-        andFN(
-          (gm, t) => !gm.hasOwner(t) && gm.isLand(t) && !gm.isImpassable(t),
-          manhattanDistFN(tile, 200),
-        ),
-      )) {
-        for (const n of this.mg.neighbors(t)) {
-          if (this.mg.owner(n) === this) {
-            return true;
-          }
+    // Attacks are fought over one province: the attacker must touch the
+    // part of that province the tile's owner (or no one) holds.
+    const province = this.mg.provinces().provinceOf(tile);
+    if (province === NO_PROVINCE) return false;
+    return this.bordersProvince(province, owner.smallID());
+  }
+
+  /**
+   * Whether one of this player's border tiles touches a tile of the province
+   * owned by ownerSmallID (0 = unowned).
+   */
+  bordersProvince(province: number, ownerSmallID: number): boolean {
+    const provinces = this.mg.provinces();
+    if (provinces.ownedBy(province, ownerSmallID) === 0) return false;
+    const map = this.mg.map();
+    const nbuf: TileRef[] = [0, 0, 0, 0];
+    for (const border of this._borderTiles) {
+      const n = map.neighbors4(border, nbuf);
+      for (let i = 0; i < n; i++) {
+        const nb = nbuf[i];
+        if (
+          provinces.provinceOf(nb) === province &&
+          map.ownerID(nb) === ownerSmallID
+        ) {
+          return true;
         }
       }
-      return false;
     }
+    return false;
   }
 
   bestTransportShipSpawn(targetTile: TileRef): TileRef | false {

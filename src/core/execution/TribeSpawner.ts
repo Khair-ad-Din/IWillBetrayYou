@@ -33,6 +33,8 @@ export class TribeSpawner {
     numTribes: number,
     purchasedNames: string[] = [],
   ): SpawnExecution[] {
+    // At most one tribe per province (see SpawnExecution).
+    numTribes = Math.min(numTribes, this.gs.provinces().count());
     const tribes: SpawnExecution[] = [];
     const { customTribes } = this.tribeNameData;
 

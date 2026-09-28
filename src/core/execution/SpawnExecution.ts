@@ -9,6 +9,7 @@ import {
   SpawnArea,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { NO_PROVINCE } from "../game/Provinces";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import {
@@ -149,6 +150,12 @@ export class SpawnExecution implements Execution {
 
     const spawnArea = this.getTeamSpawnArea();
     let tries = 0;
+    // Tribes (bots) spawn at most one per province, and never in a province
+    // another player spawned in.
+    const takenProvinces =
+      this.playerInfo.playerType === PlayerType.Bot
+        ? this.spawnedProvinces()
+        : null;
 
     while (tries < SpawnExecution.MAX_SPAWN_TRIES) {
       tries++;
@@ -159,6 +166,13 @@ export class SpawnExecution implements Execution {
         !this.mg.isLand(center) ||
         this.mg.hasOwner(center) ||
         this.mg.isBorder(center)
+      ) {
+        continue;
+      }
+
+      if (
+        takenProvinces !== null &&
+        takenProvinces.has(this.mg.provinces().provinceOf(center))
       ) {
         continue;
       }
@@ -195,6 +209,18 @@ export class SpawnExecution implements Execution {
     }
 
     return;
+  }
+
+  /** Provinces some other player has spawned in (plus NO_PROVINCE). */
+  private spawnedProvinces(): Set<number> {
+    const provinces = this.mg.provinces();
+    const taken = new Set<number>([NO_PROVINCE]);
+    for (const player of this.mg.allPlayers()) {
+      if (player.id() === this.playerInfo.id) continue;
+      const spawnTile = player.spawnTile();
+      if (spawnTile !== undefined) taken.add(provinces.provinceOf(spawnTile));
+    }
+    return taken;
   }
 
   private randTile(area?: SpawnArea): TileRef {

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { Config } from "../configuration/Config";
+import { provinceGenerationOptions } from "../configuration/ProvinceConfig";
 import { AllianceImpl, AllianceSnapshot } from "../game/AllianceImpl";
 import {
   AllianceRequestImpl,
@@ -18,6 +19,7 @@ import {
 import { GameImpl, GameSnapshot } from "../game/GameImpl";
 import { GameMap, GameMapImpl, GameMapSnapshot } from "../game/GameMap";
 import { PlayerImpl, PlayerSnapshot } from "../game/PlayerImpl";
+import { generateProvinces } from "../game/Provinces";
 import { Railroad, RailroadSnapshot } from "../game/Railroad";
 import { StatsImpl } from "../game/StatsImpl";
 import {
@@ -273,6 +275,12 @@ export function restoreGame(bytes: Uint8Array, deps: RestoreDeps): Game {
   const config = deps.config(gameConfig);
 
   const state = readVersioned(GameSnapshot, root.game);
+  // Provinces come from the pristine map, before the snapshot mutates it
+  // (water nukes), exactly as the original game generated them.
+  const provinces = generateProvinces(
+    deps.gameMap,
+    provinceGenerationOptions(gameConfig.gameMapSize),
+  );
   (deps.gameMap as GameMapImpl).restoreSnapshot(
     readVersioned(GameMapSnapshot, root.map),
   );
@@ -297,6 +305,7 @@ export function restoreGame(bytes: Uint8Array, deps: RestoreDeps): Game {
     new StatsImpl(),
     deps.teamGameSpawnAreas,
     true,
+    provinces,
   );
 
   // Pass 1: an empty shell for every object, so references resolve.
@@ -404,6 +413,7 @@ export function restoreGame(bytes: Uint8Array, deps: RestoreDeps): Game {
     const id = p.smallID();
     for (const tile of p.tiles()) map.setOwnerID(tile, id);
   }
+  game.rebuildProvinceOwnership();
   return game;
 }
 

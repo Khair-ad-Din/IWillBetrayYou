@@ -25,10 +25,11 @@ export interface ProvinceMap {
  * 2. Seeds grow over land at once (multi-source Dijkstra); highlands and
  *    mountains cost more, so borders tend to follow the relief, and water
  *    stops growth, so coasts and rivers become borders.
- * 3. Land no seed could reach (islands) becomes its own province if it is big
- *    enough, otherwise it joins the nearest province across the water.
- * 4. Provinces below the minimum size merge into the neighbor they share the
- *    longest border with.
+ * 3. Land no seed could reach (islands) becomes its own province, however
+ *    small: a province never spans water, so capturing one never hands over
+ *    land across the sea.
+ * 4. Provinces below the minimum size merge into the land neighbor they share
+ *    the longest border with (islands have none and stay as they are).
  */
 export function generateProvinces(
   map: GameMap,
@@ -65,11 +66,14 @@ export function generateProvinces(
     return { ids: new Uint16Array(n), count: 0, sizes: new Int32Array(1) };
   }
 
-  const targetCount = Math.min(
-    landCount,
-    Math.max(
-      opts.minProvinces,
-      Math.min(opts.maxProvinces, Math.round(landCount / opts.targetSize)),
+  const targetCount = Math.max(
+    1,
+    Math.min(
+      Math.floor(landCount / Math.max(1, opts.minTilesPerProvince)),
+      Math.max(
+        opts.minProvinces,
+        Math.min(opts.maxProvinces, Math.round(landCount / opts.targetSize)),
+      ),
     ),
   );
   const provinceSize = Math.max(1, Math.floor(landCount / targetCount));
@@ -83,7 +87,7 @@ export function generateProvinces(
   let labels = 0;
 
   growFromSeeds(map, cost, label, provinceSize, w, h, () => ++labels);
-  labels = claimSeedlessLand(cost, label, labels, minSize, w, h);
+  labels = claimSeedlessLand(cost, label, labels, w, h);
 
   const parent = mergeSmallRegions(cost, label, labels, minSize, w, h);
   return renumber(cost, label, parent, labels, n);
@@ -188,75 +192,36 @@ function neighbors4(t: number, w: number, n: number, out: number[]): number {
 }
 
 /**
- * Gives land that no seed reached (islands) a province: its own if it is at
- * least `minSize` tiles, otherwise the nearest province across the water.
- * Returns the new label count.
+ * Makes every connected piece of land that no seed reached (an island) its
+ * own region. Returns the new label count.
  */
 function claimSeedlessLand(
   cost: Uint8Array,
   label: Int32Array,
   labels: number,
-  minSize: number,
   w: number,
   h: number,
 ): number {
   const n = w * h;
   const queue = new Int32Array(n);
-  const orphans: number[] = [];
   const nbuf = [0, 0, 0, 0];
-
   for (let start = 0; start < n; start++) {
     if (cost[start] === 0 || label[start] !== 0) continue;
-    // Flood-fill the seedless component, marking it with a temporary label.
+    const l = ++labels;
     let head = 0;
     let tail = 0;
     queue[tail++] = start;
-    label[start] = -1;
+    label[start] = l;
     while (head < tail) {
       const count = neighbors4(queue[head++], w, n, nbuf);
       for (let j = 0; j < count; j++) {
         const nb = nbuf[j];
         if (cost[nb] === 0 || label[nb] !== 0) continue;
-        label[nb] = -1;
+        label[nb] = l;
         queue[tail++] = nb;
       }
     }
-
-    // With no province anywhere yet, even small land must stand alone.
-    if (tail >= minSize || labels === 0) {
-      const l = ++labels;
-      for (let i = 0; i < tail; i++) label[queue[i]] = l;
-    } else {
-      // Stay marked -1 so the scan above does not flood them again.
-      for (let i = 0; i < tail; i++) orphans.push(queue[i]);
-    }
   }
-
-  if (orphans.length === 0) return labels;
-  for (const t of orphans) label[t] = 0;
-
-  // Multi-source BFS across water from every labeled tile; each orphan takes
-  // the label of the first province to reach it.
-  const near = new Int32Array(label);
-  let head = 0;
-  let tail = 0;
-  for (let t = 0; t < n; t++) {
-    if (near[t] > 0) queue[tail++] = t;
-  }
-  let remaining = orphans.length;
-  while (head < tail && remaining > 0) {
-    const t = queue[head++];
-    const l = near[t];
-    const count = neighbors4(t, w, n, nbuf);
-    for (let j = 0; j < count; j++) {
-      const nb = nbuf[j];
-      if (near[nb] !== 0) continue;
-      near[nb] = l;
-      if (cost[nb] !== 0) remaining--;
-      queue[tail++] = nb;
-    }
-  }
-  for (const t of orphans) label[t] = near[t];
   return labels;
 }
 
