@@ -14,6 +14,11 @@ import {
   UnitType,
 } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
+import { NO_PROVINCE } from "../../game/Provinces";
+import {
+  chooseAttackProvince,
+  tileOfProvinceOwnedBy,
+} from "../../game/ProvinceTargeting";
 import { canBuildTransportShip } from "../../game/TransportShipUtils";
 import { PseudoRandom } from "../../PseudoRandom";
 import type {
@@ -1104,11 +1109,32 @@ export class AiAttackBehavior {
       return false;
     }
 
+    // Open a new front each time instead of piling into the province we are
+    // already attacking, so expansion covers the whole border as it used to.
+    const targetSmallID = target.smallID();
+    const busy = new Set<number>();
+    for (const attack of this.player.outgoingAttacks()) {
+      if (attack.target() === target) busy.add(attack.province());
+    }
+    const province = chooseAttackProvince(
+      this.game,
+      this.player,
+      targetSmallID,
+      busy,
+    );
+    const tile =
+      province === NO_PROVINCE
+        ? null
+        : tileOfProvinceOwnedBy(this.game, province, targetSmallID);
+
     this.game.addExecution(
       new AttackExecution(
         troops,
         this.player,
         target.isPlayer() ? target.id() : this.game.terraNullius().id(),
+        null,
+        true,
+        tile,
       ),
     );
     return true;

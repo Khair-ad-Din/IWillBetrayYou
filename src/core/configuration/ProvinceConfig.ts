@@ -34,11 +34,11 @@ export const PROVINCE_SETTINGS = {
   highlandCost: 2,
   mountainCost: 4,
   /**
-   * An attack captures its target province once the attacker holds this
-   * fraction of the tiles contested with the defender there: the defender's
-   * remaining tiles in the province then flip at once and the attack ends.
+   * Once an attacker holds this fraction of a province, the whole province
+   * becomes theirs: the scraps other players (except allies, teammates and
+   * spawn-immune players) and unclaimed land hold there flip at once.
    */
-  captureThreshold: 0.8,
+  captureThreshold: 0.95,
 };
 
 export interface ProvinceGenerationOptions {

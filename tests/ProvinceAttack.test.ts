@@ -4,6 +4,7 @@ import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
 import { NO_PROVINCE } from "../src/core/game/Provinces";
 import { ProvinceState } from "../src/core/game/ProvinceState";
+import { chooseAttackProvince } from "../src/core/game/ProvinceTargeting";
 import { setup } from "./util/Setup";
 
 let game: Game;
@@ -22,6 +23,8 @@ const defenderInfo = new PlayerInfo(
   "defender",
   "defender",
 );
+const otherInfo = new PlayerInfo("other", PlayerType.Human, "other", "other");
+const allyInfo = new PlayerInfo("ally", PlayerType.Human, "ally", "ally");
 
 /** Provinces sharing a land border with `province`, in id order. */
 function neighborProvinces(game: Game, province: number): number[] {
@@ -66,6 +69,8 @@ describe("province-bound attacks", () => {
     game = await setup("plains", { infiniteTroops: true }, [
       attackerInfo,
       defenderInfo,
+      otherInfo,
+      allyInfo,
     ]);
     attacker = game.player("attacker");
     defender = game.player("defender");
@@ -182,6 +187,73 @@ describe("province-bound attacks", () => {
     expect(tilesOwnedIn(defender, target)).toBe(0);
   });
 
+  test("holding 95% of a province sweeps everyone's scraps except allies'", () => {
+    const { home, neighbors } = pickLayout();
+    give(attacker, home);
+    const target = neighbors[0];
+    const tiles = game.provinces().tilesOf(target);
+    const other = game.player("other");
+    const ally = game.player("ally");
+    ally.createAllianceRequest(attacker)?.accept();
+    expect(attacker.isFriendly(ally)).toBe(true);
+
+    // The attacker already holds 96% of the province; the last tiles belong
+    // to the defender, a third player, an ally and no one.
+    const kept = Math.ceil(tiles.length * 0.96);
+    for (let i = 0; i < kept; i++) attacker.conquer(tiles[i]);
+    const defenderTile = tiles[kept];
+    const otherTile = tiles[kept + 1];
+    const allyTile = tiles[kept + 2];
+    const unclaimedTile = tiles[kept + 3];
+    defender.conquer(defenderTile);
+    other.conquer(otherTile);
+    ally.conquer(allyTile);
+    for (let i = kept + 4; i < tiles.length; i++) defender.conquer(tiles[i]);
+    expect(game.owner(unclaimedTile).isPlayer()).toBe(false);
+
+    runAttack(
+      new AttackExecution(
+        500_000,
+        attacker,
+        defender.id(),
+        null,
+        true,
+        defenderTile,
+      ),
+    );
+
+    expect(game.owner(defenderTile)).toBe(attacker);
+    expect(game.owner(otherTile)).toBe(attacker);
+    expect(game.owner(unclaimedTile)).toBe(attacker);
+    expect(game.owner(allyTile)).toBe(ally);
+  });
+
+  test("below 95% a province is not swept", () => {
+    const { home, neighbors } = pickLayout();
+    give(attacker, home);
+    const target = neighbors[0];
+    const tiles = game.provinces().tilesOf(target);
+    const other = game.player("other");
+    // Half the province is the third player's and never fought over.
+    const half = Math.floor(tiles.length / 2);
+    for (let i = 0; i < half; i++) other.conquer(tiles[i]);
+    for (let i = half; i < tiles.length; i++) defender.conquer(tiles[i]);
+    // Keep the defender alive (under 100 tiles it is annexed outright).
+    give(defender, neighbors[1]);
+
+    runAttack(
+      new AttackExecution(
+        500_000,
+        attacker,
+        defender.id(),
+        null,
+        true,
+        tiles[half],
+      ),
+    );
+    expect(tilesOwnedIn(other, target)).toBe(half);
+  });
+
   test("expanding into unclaimed land takes one province", () => {
     const { home, neighbors } = pickLayout();
     give(attacker, home);
@@ -236,6 +308,53 @@ describe("province-bound attacks", () => {
         );
       }
     }
+  });
+});
+
+describe("chooseAttackProvince", () => {
+  beforeEach(async () => {
+    game = await setup("plains", { infiniteTroops: true }, [
+      attackerInfo,
+      defenderInfo,
+    ]);
+    attacker = game.player("attacker");
+    defender = game.player("defender");
+  });
+
+  test("skips provinces already under attack while others are available", () => {
+    const { home, neighbors } = pickLayout();
+    give(attacker, home);
+    for (const p of neighbors) give(defender, p);
+
+    const first = chooseAttackProvince(game, attacker, defender.smallID());
+    const second = chooseAttackProvince(
+      game,
+      attacker,
+      defender.smallID(),
+      new Set([first]),
+    );
+    expect(second).not.toBe(NO_PROVINCE);
+    expect(second).not.toBe(first);
+
+    // With every candidate busy it still picks one rather than none.
+    const all = new Set(neighbors);
+    expect(
+      all.has(chooseAttackProvince(game, attacker, defender.smallID(), all)),
+    ).toBe(true);
+  });
+
+  test("prefers finishing a province the attacker mostly holds", () => {
+    const { home, neighbors } = pickLayout();
+    give(attacker, home);
+    for (const p of neighbors) give(defender, p);
+    const unfinished = neighbors[neighbors.length - 1];
+    const tiles = game.provinces().tilesOf(unfinished);
+    for (let i = 0; i < Math.floor(tiles.length * 0.9); i++) {
+      attacker.conquer(tiles[i]);
+    }
+    expect(chooseAttackProvince(game, attacker, defender.smallID())).toBe(
+      unfinished,
+    );
   });
 });
 

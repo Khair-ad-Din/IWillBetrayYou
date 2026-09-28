@@ -17,6 +17,7 @@ import {
 } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { NO_PROVINCE } from "../game/Provinces";
+import { chooseAttackProvince } from "../game/ProvinceTargeting";
 import { PseudoRandom } from "../PseudoRandom";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
 import type {
@@ -366,8 +367,8 @@ export class AttackExecution implements Execution {
 
   /**
    * The province for this attack: the one the player aimed at, the one a
-   * boat landed in, or else the target's province with the longest border
-   * against us. NO_PROVINCE when the target holds nothing next to us.
+   * boat landed in, or else the one chooseAttackProvince picks. NO_PROVINCE
+   * when the target holds nothing next to us.
    */
   private resolveProvince(): number {
     const provinces = this.mg.provinces();
@@ -391,54 +392,38 @@ export class AttackExecution implements Execution {
       }
     }
 
-    const contact = new Map<number, number>();
-    this._owner.borderTiles().forEach((tile) => {
-      const n = this.map.neighbors4(tile, this.nbuf);
-      for (let i = 0; i < n; i++) {
-        const nb = this.nbuf[i];
-        if (this.map.ownerID(nb) !== this.targetSmallID) continue;
-        const p = provinces.provinceOf(nb);
-        if (p !== NO_PROVINCE) contact.set(p, (contact.get(p) ?? 0) + 1);
-      }
-    });
-    let best = NO_PROVINCE;
-    let bestContact = 0;
-    for (const [p, c] of contact) {
-      if (c > bestContact || (c === bestContact && p < best)) {
-        best = p;
-        bestContact = c;
-      }
-    }
-    return best;
+    return chooseAttackProvince(this.mg, this._owner, this.targetSmallID);
   }
 
   /**
-   * Once the attacker holds captureThreshold of the tiles it and the target
-   * hold in the province, the target's remaining tiles there flip at once.
-   * The attack then runs out of tiles and returns its troops.
+   * Once the attacker holds captureThreshold of the province, the whole
+   * province becomes theirs: every other owner's scraps and any unclaimed
+   * tiles there flip at once. Players the attacker may not attack (allies,
+   * teammates, spawn-immune players) keep their tiles. The attack then runs
+   * out of tiles and returns its troops.
    */
   private captureProvinceIfHeld() {
     if (this.province <= NO_PROVINCE || !this.active) return;
     const provinces = this.mg.provinces();
-    const defenderHeld = provinces.ownedBy(this.province, this.targetSmallID);
-    if (defenderHeld === 0) return;
-    const attackerHeld = provinces.ownedBy(this.province, this.ownerSmallID);
-    if (
-      attackerHeld <
-      PROVINCE_SETTINGS.captureThreshold * (attackerHeld + defenderHeld)
-    ) {
+    const size = provinces.size(this.province);
+    const held = provinces.ownedBy(this.province, this.ownerSmallID);
+    if (held === size || held < PROVINCE_SETTINGS.captureThreshold * size) {
       return;
     }
+    const takeable = new Map<number, boolean>();
     const tiles = provinces.tilesOf(this.province);
     for (let i = 0; i < tiles.length; i++) {
       const t = tiles[i];
-      if (
-        this.map.ownerID(t) === this.targetSmallID &&
-        this.map.isLand(t) &&
-        !this.map.isImpassable(t)
-      ) {
-        this._owner.conquer(t);
+      const o = this.map.ownerID(t);
+      if (o === this.ownerSmallID) continue;
+      if (!this.map.isLand(t) || this.map.isImpassable(t)) continue;
+      let ok = takeable.get(o);
+      if (ok === undefined) {
+        const other = this.mg.playerBySmallID(o);
+        ok = !other.isPlayer() || this._owner.canAttackPlayer(other);
+        takeable.set(o, ok);
       }
+      if (ok) this._owner.conquer(t);
     }
     this.handleDeadDefender();
   }
