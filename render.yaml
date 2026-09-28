@@ -1,0 +1,31 @@
+# Render Blueprint: one web service built from the repo's Dockerfile.
+# Runs in GAME_ENV=dev so the server does not need the closed-source
+# OpenFront API (accounts, JWT, stats, cosmetics). Players are identified
+# by their persistentID only — fine for playing with friends.
+services:
+  - type: web
+    name: iwillbetrayyou
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # nginx inside the container listens on 80.
+      - key: PORT
+        value: "80"
+      - key: GAME_ENV
+        value: dev
+      # Only used as the JWT audience, and JWTs are skipped in dev.
+      - key: DOMAIN
+        value: localhost
+      # Must match between nginx (generate-nginx-upstream.sh) and the server.
+      - key: NUM_WORKERS
+        value: "1"
+      # Cloudflare's public test site key (always passes).
+      - key: TURNSTILE_SITE_KEY
+        value: 1x00000000000000000000AA
+      - key: API_KEY
+        generateValue: true
+      - key: ADMIN_BOT_API_KEY
+        generateValue: true
