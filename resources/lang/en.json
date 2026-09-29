@@ -908,6 +908,16 @@
   "game_timer": {
     "one_minute_remaining": "One minute remaining!"
   },
+  "gold_income": {
+    "base": "Base income",
+    "mines": "Mines",
+    "other": "Conquests & gifts",
+    "piracy": "Piracy",
+    "title": "Gold / min",
+    "trade": "Trade ships",
+    "trains": "Trains",
+    "warming_up": "Measuring ships and trains…"
+  },
   "graphics_setting": {
     "advanced_desc": "Fine-tune individual graphics options",
     "advanced_label": "Advanced settings",

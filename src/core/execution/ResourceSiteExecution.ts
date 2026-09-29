@@ -156,7 +156,8 @@ export class ResourceSiteExecution implements Execution {
     while (unit.level() < level) unit.increaseLevel();
     while (unit.level() > level) unit.decreaseLevel();
     const gold = BigInt(RESOURCE_SETTINGS.mineGoldPerLevel * level);
-    owner.addGold(gold, site.tile);
+    // No tile: a tile would pop a "+gold" bonus effect on the mine every tick.
+    owner.addGold(gold);
     mg.stats().goldWork(owner, gold);
   }
 

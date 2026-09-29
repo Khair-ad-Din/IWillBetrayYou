@@ -30,6 +30,7 @@ import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
+import { GoldIncomePanel } from "./layers/GoldIncomePanel";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { ImmunityTimer } from "./layers/ImmunityTimer";
 import { InGamePromo } from "./layers/InGamePromo";
@@ -168,6 +169,14 @@ export function createRenderer(
   }
   newLobbyPrompt.eventBus = eventBus;
   newLobbyPrompt.game = game;
+
+  const goldIncomePanel = document.querySelector(
+    "gold-income-panel",
+  ) as GoldIncomePanel;
+  if (!(goldIncomePanel instanceof GoldIncomePanel)) {
+    console.error("gold income panel not found");
+  }
+  goldIncomePanel.game = game;
 
   const replayPanel = document.querySelector("replay-panel") as ReplayPanel;
   if (!(replayPanel instanceof ReplayPanel)) {
@@ -355,6 +364,7 @@ export function createRenderer(
     winModal,
     newLobbyPrompt,
     replayPanel,
+    goldIncomePanel,
     settingsModal,
     playerPanel,
     headsUpMessage,

@@ -139,10 +139,12 @@ describe("mine", () => {
     expect(unit.level()).toBe(1);
 
     const before = owner.gold();
-    game.executeNextTick();
+    const updates = game.executeNextTick();
     expect(owner.gold() - before).toBe(
       BigInt(RESOURCE_SETTINGS.mineGoldPerLevel),
     );
+    // Paying a mine must not pop a "+gold" bonus effect every tick.
+    expect(updates[GameUpdateType.BonusEvent]).toHaveLength(0);
 
     for (let i = 0; i < RESOURCE_SETTINGS.mineLevelUpTicks; i++) {
       game.executeNextTick();
