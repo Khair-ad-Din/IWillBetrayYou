@@ -1,6 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { RESOURCE_SETTINGS } from "../../../core/configuration/ProvinceConfig";
+import { mineGoldPerTick } from "../../../core/configuration/ProvinceConfig";
 import { UnitType } from "../../../core/game/Game";
 import { Controller } from "../../Controller";
 import { renderNumber, translateText } from "../../Utils";
@@ -156,9 +156,9 @@ export class GoldIncomePanel extends LitElement implements Controller {
       return;
     }
     const baseRate = Number(this.game.config().goldAdditionRate(me));
-    const mineRate =
-      me.units(UnitType.Mine).reduce((sum, mine) => sum + mine.level(), 0) *
-      RESOURCE_SETTINGS.mineGoldPerLevel;
+    const mineRate = me
+      .units(UnitType.Mine)
+      .reduce((sum, mine) => sum + mineGoldPerTick(mine.level()), 0);
     this.tracker.record(
       {
         tick: this.game.ticks(),

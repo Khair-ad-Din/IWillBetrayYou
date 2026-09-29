@@ -56,14 +56,26 @@ export const RESOURCE_SETTINGS = {
   /** A farm's owner counts its tiles in the farm's province this many times
    * over towards the troop cap. */
   farmTileMultiplier: 2,
-  /** Gold per tick a mine pays per level. */
-  mineGoldPerLevel: 300,
+  /** Gold per tick a level-1 mine pays: low, so mines matter less early. */
+  mineStartGold: 50,
+  /** Extra gold per tick each level above 1 adds, so held mines carry the
+   * mid and late game. */
+  mineGoldPerLevel: 330,
   /** Ticks a mine must stay with one owner to gain a level (10 ticks = 1 s).
    * It drops back to level 1 when captured. */
   mineLevelUpTicks: 2 * 60 * 10,
   /** How much more the AI wants a province holding a live resource site. */
   aiResourceProvinceWeight: 3,
 };
+
+/** Gold per tick a mine of `level` pays (simulation and HUD share it). */
+export function mineGoldPerTick(
+  level: number,
+  settings: typeof RESOURCE_SETTINGS = RESOURCE_SETTINGS,
+): number {
+  if (level < 1) return 0;
+  return settings.mineStartGold + settings.mineGoldPerLevel * (level - 1);
+}
 
 export interface ProvinceGenerationOptions {
   /** Average land tiles per province for this map size. */

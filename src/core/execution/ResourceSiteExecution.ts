@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { RESOURCE_SETTINGS } from "../configuration/ProvinceConfig";
+import {
+  mineGoldPerTick,
+  RESOURCE_SETTINGS,
+} from "../configuration/ProvinceConfig";
 import { Execution, Game, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { GameUpdateType, ResourceSiteState } from "../game/GameUpdates";
@@ -38,7 +41,7 @@ interface SiteRecord extends ResourceSite {
  *   site with it for good; one lost any other way (its tile left unowned)
  *   frees the site again.
  * - Mines gain a level every mineLevelUpTicks with one owner, back to level 1
- *   when captured, and pay mineGoldPerLevel gold per level every tick.
+ *   when captured, and pay mineGoldPerTick(level) gold every tick.
  *
  * Farms have no per-tick work: their troop bonus is read by Config.maxTroops.
  */
@@ -155,7 +158,7 @@ export class ResourceSiteExecution implements Execution {
       Math.floor((ticks - site.heldSince) / RESOURCE_SETTINGS.mineLevelUpTicks);
     while (unit.level() < level) unit.increaseLevel();
     while (unit.level() > level) unit.decreaseLevel();
-    const gold = BigInt(RESOURCE_SETTINGS.mineGoldPerLevel * level);
+    const gold = BigInt(mineGoldPerTick(level));
     // No tile: a tile would pop a "+gold" bonus effect on the mine every tick.
     owner.addGold(gold);
     mg.stats().goldWork(owner, gold);

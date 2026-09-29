@@ -1,4 +1,7 @@
-import { RESOURCE_SETTINGS } from "../src/core/configuration/ProvinceConfig";
+import {
+  mineGoldPerTick,
+  RESOURCE_SETTINGS,
+} from "../src/core/configuration/ProvinceConfig";
 import { PlayerExecution } from "../src/core/execution/PlayerExecution";
 import { ResourceSiteExecution } from "../src/core/execution/ResourceSiteExecution";
 import {
@@ -140,9 +143,7 @@ describe("mine", () => {
 
     const before = owner.gold();
     const updates = game.executeNextTick();
-    expect(owner.gold() - before).toBe(
-      BigInt(RESOURCE_SETTINGS.mineGoldPerLevel),
-    );
+    expect(owner.gold() - before).toBe(BigInt(RESOURCE_SETTINGS.mineStartGold));
     // Paying a mine must not pop a "+gold" bonus effect every tick.
     expect(updates[GameUpdateType.BonusEvent]).toHaveLength(0);
 
@@ -153,8 +154,22 @@ describe("mine", () => {
     const beforeL2 = owner.gold();
     game.executeNextTick();
     expect(owner.gold() - beforeL2).toBe(
-      BigInt(2 * RESOURCE_SETTINGS.mineGoldPerLevel),
+      BigInt(
+        RESOURCE_SETTINGS.mineStartGold + RESOURCE_SETTINGS.mineGoldPerLevel,
+      ),
     );
+  });
+
+  test("pays little at level 1 and grows by mineGoldPerLevel per level", () => {
+    const settings = {
+      ...RESOURCE_SETTINGS,
+      mineStartGold: 50,
+      mineGoldPerLevel: 330,
+    };
+    expect(mineGoldPerTick(0, settings)).toBe(0);
+    expect(mineGoldPerTick(1, settings)).toBe(50);
+    expect(mineGoldPerTick(2, settings)).toBe(380);
+    expect(mineGoldPerTick(9, settings)).toBe(50 + 8 * 330);
   });
 
   test("drops back to level 1 when captured", () => {
