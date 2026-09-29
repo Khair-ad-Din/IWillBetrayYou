@@ -155,21 +155,20 @@ describe("mine", () => {
     game.executeNextTick();
     expect(owner.gold() - beforeL2).toBe(
       BigInt(
-        RESOURCE_SETTINGS.mineStartGold + RESOURCE_SETTINGS.mineGoldPerLevel,
+        RESOURCE_SETTINGS.mineStartGold + RESOURCE_SETTINGS.mineGrowthStep,
       ),
     );
   });
 
-  test("pays little at level 1 and grows by mineGoldPerLevel per level", () => {
+  test("each level raises the pay by one more growth step than the last", () => {
     const settings = {
       ...RESOURCE_SETTINGS,
-      mineStartGold: 50,
-      mineGoldPerLevel: 330,
+      mineStartGold: 100,
+      mineGrowthStep: 50,
     };
-    expect(mineGoldPerTick(0, settings)).toBe(0);
-    expect(mineGoldPerTick(1, settings)).toBe(50);
-    expect(mineGoldPerTick(2, settings)).toBe(380);
-    expect(mineGoldPerTick(9, settings)).toBe(50 + 8 * 330);
+    expect(
+      [0, 1, 2, 3, 4, 5, 13].map((level) => mineGoldPerTick(level, settings)),
+    ).toEqual([0, 100, 150, 250, 400, 600, 4000]);
   });
 
   test("drops back to level 1 when captured", () => {

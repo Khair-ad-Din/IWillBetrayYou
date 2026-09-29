@@ -6,8 +6,10 @@ sesiones), **L** (varias sesiones, toca muchas piezas).
 
 Hecho hasta ahora: provincias procedurales (F0), ataques por provincia con
 barrida al 95 % (F1) y resaltado de provincias al pasar el ratón y en
-ataques (F2). El ritmo general se ralentizará cuando estas mecánicas nuevas
-hagan que falte tiempo para gestionarlo todo.
+ataques (F2), edificios de recurso (idea 1, abajo) y un panel arriba a la
+derecha con el oro por minuto desglosado por fuente. El ritmo general se
+ralentizará cuando estas mecánicas nuevas hagan que falte tiempo para
+gestionarlo todo.
 
 ## 1. Rasgos de provincia (M) — hecho, como edificios de recurso
 
@@ -19,9 +21,11 @@ cualquier otro y una nuke los destruye para siempre. La IA les da prioridad.
 
 - **Granja**: las casillas del dueño en esa provincia cuentan x2 para el
   máximo de tropas.
-- **Mina**: oro fijo por tick. Empieza como una fábrica con trenes (300 por
-  tick) y sube de nivel sola cada 2 minutos en poder del mismo dueño (+300 por
-  nivel, sin tope); si la conquistan, vuelve al nivel 1.
+- **Mina**: oro por tick que crece con el nivel. Sube un nivel cada 2 minutos
+  en poder del mismo dueño, sin tope; si la conquistan, vuelve al nivel 1.
+  Curva (100, 150, 250, 400, 600…): cada nivel sube un "paso" más que el
+  anterior. Unos 60k de oro/min al empezar, 360k a los 8 min, 1,1M a los 16 y
+  2,4M a los 24. Si se queda floja, se sube mineStartGold.
 - **Puerto natural**: puerto de nivel 1 gratis, no mejorable, que no encarece
   los demás puertos; icono propio.
 

@@ -56,11 +56,11 @@ export const RESOURCE_SETTINGS = {
   /** A farm's owner counts its tiles in the farm's province this many times
    * over towards the troop cap. */
   farmTileMultiplier: 2,
-  /** Gold per tick a level-1 mine pays: low, so mines matter less early. */
-  mineStartGold: 50,
-  /** Extra gold per tick each level above 1 adds, so held mines carry the
-   * mid and late game. */
-  mineGoldPerLevel: 330,
+  /** Gold per tick a level-1 mine pays. Raise it if mines feel weak. */
+  mineStartGold: 100,
+  /** How much the per-level raise grows: level 2 adds 1 step, level 3 adds
+   * 2 more, level 4 adds 3 more... (100, 150, 250, 400, 600, ...). */
+  mineGrowthStep: 50,
   /** Ticks a mine must stay with one owner to gain a level (10 ticks = 1 s).
    * It drops back to level 1 when captured. */
   mineLevelUpTicks: 2 * 60 * 10,
@@ -68,13 +68,18 @@ export const RESOURCE_SETTINGS = {
   aiResourceProvinceWeight: 3,
 };
 
-/** Gold per tick a mine of `level` pays (simulation and HUD share it). */
+/**
+ * Gold per tick a mine of `level` pays (simulation and HUD share it). Each
+ * level raises the pay by one more growth step than the last one did:
+ * start + step * (1 + 2 + ... + (level - 1)).
+ */
 export function mineGoldPerTick(
   level: number,
   settings: typeof RESOURCE_SETTINGS = RESOURCE_SETTINGS,
 ): number {
   if (level < 1) return 0;
-  return settings.mineStartGold + settings.mineGoldPerLevel * (level - 1);
+  const steps = ((level - 1) * level) / 2;
+  return settings.mineStartGold + settings.mineGrowthStep * steps;
 }
 
 export interface ProvinceGenerationOptions {
