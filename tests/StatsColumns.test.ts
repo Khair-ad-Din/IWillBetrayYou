@@ -138,22 +138,25 @@ describe("Stats columns under fog of war", () => {
   const intel = {
     tiles: 1200,
     bonusTiles: 0,
-    live: false,
-    troops: 30_000,
-    troopsTick: 50,
     unitLevels: (type: string) => (type === "City" ? 1 : 0),
   };
   const game = {
     intel: () => intel,
     ticks: () => 100,
-    config: () => stubConfig(),
+    // A stand-in formula: 10 troops per tile the estimate is fed.
+    config: () => ({
+      maxTroops: (p: { numTilesOwned(): number }) => p.numTilesOwned() * 10,
+    }),
   };
   const value = (id: Parameters<typeof columnById>[0]) =>
     columnById(id).value!(player as never, game as never);
 
   it("shows only what the local player knows", () => {
     expect(value("tiles")).toBe(1200);
-    expect(value("troops")).toBe(30_000);
+    // Never the real 70k: the cap its known land would give (1,200 known
+    // tiles, not the 5,000 it really holds).
+    expect(value("troops")).toBe(12_000);
+    expect(value("maxtroops")).toBe(12_000);
     expect(value("cities")).toBe(1);
     expect(value("gold")).toBeNaN();
     expect(value("goldIncomePerMin")).toBeNaN();

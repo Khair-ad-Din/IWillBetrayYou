@@ -651,7 +651,7 @@ export class PlayerPanel extends LitElement implements Controller {
         >
           <span class="mr-0.5">🛡️</span>
           <span translate="no" class="tabular-nums w-[5ch] font-semibold">
-            ${troops.troops === null ? "??" : renderTroops(troops.troops || 0)}
+            ${troops.estimated ? "~" : ""}${renderTroops(troops.troops || 0)}
           </span>
           <span class="text-zinc-200 whitespace-nowrap">
             ${translateText("player_panel.troops")}</span

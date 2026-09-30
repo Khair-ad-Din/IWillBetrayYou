@@ -17,6 +17,7 @@ import { MapRenderer } from "../render/gl";
 import type { AttackTroopLabel } from "../render/gl/passes/WorldTextPass";
 import { renderTroops } from "../Utils";
 import { GameView } from "../view";
+import { shownAttackTroops } from "../view/FogIntel";
 
 // Aquarius (#3fa9f5) for outgoing, red-400 (#f87171) for incoming.
 const OUTGOING_R = 0x3f / 255;
@@ -114,7 +115,7 @@ export class AttackingTroopsController implements Controller {
       const defender = this.game.playerBySmallID(attack.targetID);
       if (!defender || !defender.isPlayer()) continue;
       activeIDs.add(attack.id);
-      this.ensureEntry(attack.id, attack.troops, false);
+      this.ensureEntry(attack.id, renderTroops(attack.troops), false);
     }
 
     // Incoming: only label attacks coming from another player; skip tribes.
@@ -128,7 +129,12 @@ export class AttackingTroopsController implements Controller {
         continue;
       }
       activeIDs.add(attack.id);
-      this.ensureEntry(attack.id, attack.troops, true);
+      // Under fog of war, how many troops others commit is not known.
+      this.ensureEntry(
+        attack.id,
+        shownAttackTroops(this.game, attacker, attack.troops),
+        true,
+      );
     }
 
     for (const id of this.attacks.keys()) {
@@ -158,8 +164,7 @@ export class AttackingTroopsController implements Controller {
       });
   }
 
-  private ensureEntry(attackID: string, troops: number, isIncoming: boolean) {
-    const text = renderTroops(troops);
+  private ensureEntry(attackID: string, text: string, isIncoming: boolean) {
     const existing = this.attacks.get(attackID);
     if (existing) {
       existing.text = text;

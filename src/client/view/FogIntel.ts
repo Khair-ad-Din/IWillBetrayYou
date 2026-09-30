@@ -1,4 +1,5 @@
-import { UnitType } from "../../core/game/Game";
+import { TerraNullius, UnitType } from "../../core/game/Game";
+import { renderTroops } from "../Utils";
 import type { GameView } from "./GameView";
 import type { PlayerView } from "./PlayerView";
 
@@ -13,20 +14,32 @@ export function shownTiles(game: GameView, player: PlayerView): number {
 }
 
 /**
- * Troops, with how many seconds old the figure is (0 = live); troops is
- * null when the local player has never seen them.
+ * Troops. Under fog of war the real count is never shown: only an estimate,
+ * the troop cap the player's known land would give (shownMaxTroops).
  */
 export function shownTroops(
   game: GameView,
   player: PlayerView,
-): { troops: number | null; ageSeconds: number } {
-  const intel = game.intel(player);
-  if (intel === null) return { troops: player.troops(), ageSeconds: 0 };
-  const age =
-    intel.troopsTick === null
-      ? 0
-      : Math.max(0, Math.floor((game.ticks() - intel.troopsTick) / 10));
-  return { troops: intel.troops, ageSeconds: age };
+): { troops: number; estimated: boolean } {
+  if (game.intel(player) === null) {
+    return { troops: player.troops(), estimated: false };
+  }
+  return { troops: shownMaxTroops(game, player), estimated: true };
+}
+
+/**
+ * Troops in an attack or boat of `attacker`, or "??" when the fog hides them
+ * (how many troops others commit is not known).
+ */
+export function shownAttackTroops(
+  game: GameView,
+  attacker: PlayerView | TerraNullius | null | undefined,
+  troops: number,
+): string {
+  if (attacker?.isPlayer() && game.intel(attacker as PlayerView) !== null) {
+    return "??";
+  }
+  return renderTroops(troops);
 }
 
 /** Gold, or null when the fog hides it (always, for other players). */

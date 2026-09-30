@@ -483,8 +483,10 @@ export class NamePass {
       if (snap || slot.troopLen === 0 || troopBucket !== slot.lastTroopBucket) {
         slot.lastTroopBucket = troopBucket;
         const troops = ps?.troops ?? 0;
-        // Negative: unknown under fog of war (see FogFilter).
-        const troopStr = troops < 0 ? "??" : renderTroops(troops);
+        // Under fog of war other players' troops are an estimate (FogFilter).
+        const troopStr = ps?.troopsEstimated
+          ? `~${renderTroops(troops)}`
+          : renderTroops(troops);
         if (troopStr !== slot.lastTroopStr) {
           slot.troopLen = Math.min(troopStr.length, MAX_CHARS);
           slot.lastTroopStr = troopStr;

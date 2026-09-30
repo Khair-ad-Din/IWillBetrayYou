@@ -23,6 +23,7 @@ import {
 import { UIState } from "../../UIState";
 import { renderTroops, translateText } from "../../Utils";
 import { GameView, PlayerView, UnitView } from "../../view";
+import { shownAttackTroops } from "../../view/FogIntel";
 import { getColoredSprite } from "../SpriteLoader";
 const soldierIcon = assetUrl("images/SoldierIcon.svg");
 const swordIcon = assetUrl("images/SwordIcon.svg");
@@ -223,7 +224,13 @@ export class AttacksDisplay extends LitElement implements Controller {
                   class="h-4 w-4"
                   style="filter: brightness(0) saturate(100%) invert(27%) sepia(91%) saturate(4551%) hue-rotate(348deg) brightness(89%) contrast(97%)"
                 />↓</span
-              ><span class="ml-1">${renderTroops(attack.troops)}</span>
+              ><span class="ml-1"
+                >${shownAttackTroops(
+                  this.game,
+                  this.game.playerBySmallID(attack.attackerID) as PlayerView,
+                  attack.troops,
+                )}</span
+              >
               <span class="truncate ml-1"
                 >${(
                   this.game.playerBySmallID(attack.attackerID) as PlayerView
@@ -421,7 +428,11 @@ export class AttacksDisplay extends LitElement implements Controller {
           ${this.renderButton({
             content: html`${this.renderBoatIcon(boat)}
               <span class="inline-block min-w-[3rem] text-right"
-                >${renderTroops(boat.troops())}</span
+                >${shownAttackTroops(
+                  this.game,
+                  boat.owner(),
+                  boat.troops(),
+                )}</span
               >
               <span class="truncate text-xs ml-1"
                 >${boat.owner()?.displayName()}</span

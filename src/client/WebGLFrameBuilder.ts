@@ -21,6 +21,7 @@ import { getCachedCosmetics } from "./Cosmetics";
 import { buildTerrainRowSpans } from "./render/frame/derive/TerrainRowSpans";
 import { FogFilter, FogViewer } from "./render/frame/FogFilter";
 import { uploadFrameData } from "./render/frame/Upload";
+import { shownMaxTroops } from "./view/FogIntel";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
 // imports into any non-Vite consumer (e.g. the Node perf harness).
 import type { MapRenderer, PlayerStatic, SpawnCenter } from "./render/gl";
@@ -355,6 +356,10 @@ export class WebGLFrameBuilder {
         }
         return f;
       },
+      estimateTroops: (id) => {
+        const player = gameView.playerBySmallID(id);
+        return player.isPlayer() ? shownMaxTroops(gameView, player) : 0;
+      },
       smallIDOf: (playerID) => {
         byID ??= new Map(gameView.players().map((p) => [p.id(), p.smallID()]));
         return byID.get(playerID);
@@ -607,7 +612,9 @@ export class WebGLFrameBuilder {
   private syncSmallPlayerGlow(gameView: GameView): void {
     // Strength (incl. off at 0) is read live in the glow pass; here we only
     // decide who qualifies. Skip spawn + the first minute.
+    // Off with fog of war: it would hint at how small hidden players are.
     if (
+      gameView.config().fogOfWar() ||
       gameView.inSpawnPhase() ||
       gameView.elapsedGameSeconds() < SMALL_PLAYER_GLOW_GRACE_SECONDS
     ) {

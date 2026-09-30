@@ -28,6 +28,7 @@ import {
 } from "../../Utils";
 import { GameView, PlayerView, UnitView } from "../../view";
 import {
+  shownAttackTroops,
   shownGold,
   shownMaxTroops,
   shownTroops,
@@ -504,7 +505,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
               totalTroops,
               attackingTroops,
               maxTroops,
-              shown.ageSeconds,
+              shown.estimated,
             )}
           </div>
         </div>
@@ -579,13 +580,13 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
   }
 
   private renderTroopBar(
-    totalTroops: number | null,
+    totalTroops: number,
     attackingTroops: number,
     maxTroops: number,
-    ageSeconds = 0,
+    estimated = false,
   ) {
     const base = Math.max(maxTroops, 1);
-    const greenPercentRaw = ((totalTroops ?? 0) / base) * 100;
+    const greenPercentRaw = (totalTroops / base) * 100;
     const orangePercentRaw = (attackingTroops / base) * 100;
 
     const greenPercent = Math.max(0, Math.min(100, greenPercentRaw));
@@ -614,17 +615,14 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
           translate="no"
         >
           <span class="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-            >${totalTroops === null
-              ? "??"
-              : renderTroops(totalTroops)}${ageSeconds > 0
-              ? html`<span class="text-[10px] text-white/60">
-                  (${renderDuration(ageSeconds)})</span
-                >`
-              : ""}</span
+            >${estimated ? "~" : ""}${renderTroops(totalTroops)}</span
           >
-          <span class="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-            >${renderTroops(maxTroops)}</span
-          >
+          ${estimated
+            ? ""
+            : html`<span
+                class="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
+                >${renderTroops(maxTroops)}</span
+              >`}
         </div>
         <img
           src=${soldierIcon}
@@ -657,7 +655,8 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
           ${unit.type() === UnitType.TransportShip
             ? html`
                 <div class="text-sm">
-                  Troops: ${renderTroops(unit.troops())}
+                  Troops:
+                  ${shownAttackTroops(this.game, unit.owner(), unit.troops())}
                 </div>
               `
             : ""}

@@ -125,12 +125,6 @@ export interface PlayerIntel {
   tiles: number;
   /** Extra troop-cap tiles from the farms the player knows of. */
   bonusTiles: number;
-  /** Whether any of their provinces is in sight right now. */
-  live: boolean;
-  /** Troops when last seen live (current when `live`), or null if never. */
-  troops: number | null;
-  /** Tick of that sighting; null while live or never seen. */
-  troopsTick: number | null;
   /** Levels of their structures (or count of warships) the player knows. */
   unitLevels(unitType: string): number;
 }

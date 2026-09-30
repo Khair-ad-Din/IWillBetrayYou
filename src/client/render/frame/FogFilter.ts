@@ -26,6 +26,8 @@ export interface FogViewer {
   smallID: number;
   /** The local player, allies and teammates. */
   isFriendly(smallID: number): boolean;
+  /** Troops the player estimates `smallID` has (FogIntel.shownMaxTroops). */
+  estimateTroops(smallID: number): number;
   /** smallID of a player by their id (name labels are keyed by id). */
   smallIDOf(playerID: string): number | undefined;
 }
@@ -70,14 +72,8 @@ export class FogFilter implements FogPerception {
   private readonly shown: Uint8Array;
   /** Whether the display holds what the player last saw of a province. */
   private readonly frozen: Uint8Array;
-  /** Display tiles per owner smallID, and those in Visible provinces. */
+  /** Display tiles per owner smallID: the land the player knows of. */
   private readonly knownTiles = new Int32Array(OWNER_MASK + 1);
-  private readonly liveTiles = new Int32Array(OWNER_MASK + 1);
-  /** Troops of each player when last seen live. */
-  private readonly lastTroops = new Map<
-    number,
-    { troops: number; tick: number }
-  >();
   /** Levels of the structures and warships the player sees or remembers. */
   private unitLevels = new Map<number, Map<string, number>>();
   /** Extra troop-cap tiles from the farms the player knows, per owner. */
@@ -206,14 +202,8 @@ export class FogFilter implements FogPerception {
           const before = this.display[t] & OWNER_MASK;
           const after = real[t] & OWNER_MASK;
           if (before !== after) {
-            if (before !== 0) {
-              this.knownTiles[before]--;
-              this.liveTiles[before]--;
-            }
-            if (after !== 0) {
-              this.knownTiles[after]++;
-              this.liveTiles[after]++;
-            }
+            if (before !== 0) this.knownTiles[before]--;
+            if (after !== 0) this.knownTiles[after]++;
           }
           this.display[t] = real[t];
           changedTiles.push(t);
@@ -276,15 +266,6 @@ export class FogFilter implements FogPerception {
       }
       levels.set(u.unitType, (levels.get(u.unitType) ?? 0) + u.level);
     }
-    for (const state of frame.players.values()) {
-      if (this.liveTiles[state.smallID] > 0) {
-        this.lastTroops.set(state.smallID, {
-          troops: state.troops,
-          tick: frame.tick,
-        });
-      }
-    }
-
     const names = new Map(frame.names);
     for (const [key, n] of frame.names) {
       const smallID = viewer.smallIDOf(n.playerID);
@@ -337,12 +318,16 @@ export class FogFilter implements FogPerception {
       }
     }
 
-    // Troops under other players' names: as last seen, -1 if never.
+    // Troops under other players' names: only an estimate from their known
+    // land (FogIntel.shownMaxTroops), never the real count.
     const players = new Map(frame.players);
     for (const [key, state] of frame.players) {
       if (viewer.isFriendly(state.smallID)) continue;
-      const troops = this.lastTroops.get(state.smallID)?.troops ?? -1;
-      if (troops !== state.troops) players.set(key, { ...state, troops });
+      players.set(key, {
+        ...state,
+        troops: viewer.estimateTroops(state.smallID),
+        troopsEstimated: true,
+      });
     }
 
     return {
@@ -390,15 +375,10 @@ export class FogFilter implements FogPerception {
   }
 
   intel(smallID: number): PlayerIntel {
-    const last = this.lastTroops.get(smallID);
-    const live = this.liveTiles[smallID] > 0;
     const levels = this.unitLevels.get(smallID);
     return {
       tiles: this.knownTiles[smallID],
       bonusTiles: this.farmBonus.get(smallID) ?? 0,
-      live,
-      troops: last?.troops ?? null,
-      troopsTick: live ? null : (last?.tick ?? null),
       unitLevels: (unitType) => levels?.get(unitType) ?? 0,
     };
   }
@@ -421,12 +401,8 @@ export class FogFilter implements FogPerception {
   }
 
   private rebuild(real: Uint16Array, fog: ClientFog, restart: boolean): void {
-    if (restart) {
-      this.frozen.fill(0);
-      this.lastTroops.clear();
-    }
+    if (restart) this.frozen.fill(0);
     this.knownTiles.fill(0);
-    this.liveTiles.fill(0);
     for (let p = 1; p <= this.count; p++) {
       this.applyProvince(p, real, fog, null);
       this.account(p, 1);
@@ -439,13 +415,10 @@ export class FogFilter implements FogPerception {
 
   /** Adds (sign 1) or removes (-1) province `p` from the per-owner counts. */
   private account(p: number, sign: number): void {
-    const live = this.shown[p] === ProvinceVisibility.Visible;
     const tiles = this.tilesOf;
     for (let i = this.offsets[p]; i < this.offsets[p + 1]; i++) {
       const owner = this.display[tiles[i]] & OWNER_MASK;
-      if (owner === 0) continue;
-      this.knownTiles[owner] += sign;
-      if (live) this.liveTiles[owner] += sign;
+      if (owner !== 0) this.knownTiles[owner] += sign;
     }
   }
 

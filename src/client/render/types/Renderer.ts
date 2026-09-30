@@ -60,6 +60,8 @@ export interface EmojiData {
 }
 
 export interface PlayerState {
+  /** Fog of war: `troops` is only the local player's estimate. */
+  troopsEstimated?: boolean;
   /** Extra tiles counted towards the troop cap (farms). */
   bonusTroopTiles: number;
   smallID: number;

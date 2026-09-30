@@ -28,6 +28,7 @@ const ENEMY = 2;
 const viewer: FogViewer = {
   smallID: ME,
   isFriendly: (id) => id === ME,
+  estimateTroops: () => 1234,
   smallIDOf: (playerID) => ({ me: ME, enemy: ENEMY })[playerID],
 };
 
@@ -302,32 +303,22 @@ describe("FogFilter", () => {
     expect(filter.tileKnown(RIGHT)).toBe(false);
   });
 
-  test("tracks what the player knows of each other player", () => {
+  test("counts the land the player knows each other player holds", () => {
     fog.apply(update(true, [{ viewer: ME, province: 1, visibility: Visible }]));
-    const players = new Map([
-      [ENEMY, { smallID: ENEMY, troops: 500 } as PlayerState],
-    ]);
-    // The enemy holds a tile in the visible province: seen live.
+    // The enemy holds a tile in the visible province, and province 2
+    // (unknown to the player) entirely.
     const real = realTiles();
     real[1] = ENEMY;
-    filter.filter(frame(real, [], [], { players }), fog, viewer);
-    let intel = filter.intel(ENEMY);
-    expect(intel).toMatchObject({ tiles: 1, live: true, troops: 500 });
+    filter.filter(frame(real, []), fog, viewer);
+    expect(filter.intel(ENEMY).tiles).toBe(1);
 
-    // Out of sight: the last figure stays, with the tick it was seen.
+    // It loses that tile: the player sees it.
     real[1] = ME;
-    const later = { ...frame(real, [1], [], { players }), tick: 9 };
-    filter.filter(later, fog, viewer);
-    intel = filter.intel(ENEMY);
-    expect(intel).toMatchObject({
-      tiles: 0,
-      live: false,
-      troops: 500,
-      troopsTick: 1,
-    });
+    filter.filter(frame(real, [1]), fog, viewer);
+    expect(filter.intel(ENEMY).tiles).toBe(0);
   });
 
-  test("names show troops as last seen, ?? (-1) if never, and no crown", () => {
+  test("names show only estimated troops for others, and no crown", () => {
     fog.apply(update(true, [{ viewer: ME, province: 1, visibility: Visible }]));
     const players = new Map([
       [ME, { smallID: ME, troops: 100 } as PlayerState],
@@ -343,7 +334,10 @@ describe("FogFilter", () => {
       viewer,
     );
     expect(out.players.get(ME)!.troops).toBe(100);
-    expect(out.players.get(ENEMY)!.troops).toBe(-1);
+    expect(out.players.get(ME)!.troopsEstimated).toBeUndefined();
+    // Never the real 500: the viewer's estimate from the known land.
+    expect(out.players.get(ENEMY)!.troops).toBe(1234);
+    expect(out.players.get(ENEMY)!.troopsEstimated).toBe(true);
     expect(out.playerStatus.get(ENEMY)!.crown).toBe(false);
     expect(out.playerStatus.get(ME)!.crown).toBe(true);
   });
