@@ -64,6 +64,7 @@ export function createRenderer(
     ghostStructure: null,
     rocketDirectionUp: true,
     upgradeMultiplier: 1,
+    spyTargeting: false,
   };
 
   //hide when the game renders

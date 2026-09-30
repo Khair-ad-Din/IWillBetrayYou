@@ -12,6 +12,7 @@ import {
   SendEmbargoIntentEvent,
   SendEmojiIntentEvent,
   SendSpawnIntentEvent,
+  SendSpyIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
@@ -89,6 +90,11 @@ export class PlayerActionHandler {
 
   handleEmbargo(recipient: PlayerView, action: "start" | "stop") {
     this.eventBus.emit(new SendEmbargoIntentEvent(recipient, action));
+  }
+
+  /** Fog of war: send a spy at `target`. */
+  handleSpy(target: PlayerView) {
+    this.eventBus.emit(new SendSpyIntentEvent(target));
   }
 
   handleEmoji(targetPlayer: PlayerView | "AllPlayers", emojiIndex: number) {

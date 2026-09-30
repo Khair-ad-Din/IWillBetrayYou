@@ -11,6 +11,7 @@ import { BuildUnitIntentEvent } from "../../../src/client/Transport";
 import { GameView, PlayerView } from "../../../src/client/view";
 import { UnitType } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
+import { NO_FOG } from "../../util/viewStubs";
 
 vi.mock("../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
@@ -109,6 +110,7 @@ describe("RadialMenuElements", () => {
         }),
         isUnitDisabled: vi.fn(() => false),
       })),
+      ...NO_FOG,
     } as unknown as GameView;
 
     mockBuildMenu = {
@@ -352,6 +354,82 @@ describe("RadialMenuElements", () => {
       expect(attackMenu).toBeDefined();
       expect(buildMenu).toBeUndefined();
       expect(boatMenu).toBeDefined();
+    });
+
+    it("offers a spy on another player's land only with fog of war", () => {
+      const enemyPlayer = {
+        id: () => 2,
+        isPlayer: vi.fn(() => true),
+        isAlliedWith: vi.fn(() => false),
+      } as unknown as PlayerView;
+      mockGame.owner = vi.fn(() => enemyPlayer);
+      mockParams.selected = enemyPlayer;
+      expect(
+        rootMenuElement.subMenu!(mockParams).find((i) => i.id === "spy"),
+      ).toBeUndefined();
+
+      const handleSpy = vi.fn();
+      const closeMenu = vi.fn();
+      Object.assign(mockGame, {
+        fogActive: () => true,
+        spyRefusal: () => null,
+        nextSpyCost: () => 100_000n,
+      });
+      const params = {
+        ...mockParams,
+        playerActionHandler: { handleSpy } as any,
+        closeMenu,
+      };
+      const spy = rootMenuElement.subMenu!(params).find((i) => i.id === "spy");
+      expect(spy).toBeDefined();
+      expect(spy!.disabled(params)).toBe(false);
+      spy!.action!(params);
+      expect(handleSpy).toHaveBeenCalledWith(enemyPlayer);
+      expect(closeMenu).toHaveBeenCalled();
+
+      (mockGame as any).spyRefusal = () => "spy_no_gold";
+      const refused = rootMenuElement.subMenu!(params).find(
+        (i) => i.id === "spy",
+      );
+      expect(refused!.disabled(params)).toBe(true);
+    });
+
+    it("offers a spy on another player's land only with fog of war", () => {
+      const enemyPlayer = {
+        id: () => 2,
+        isPlayer: vi.fn(() => true),
+        isAlliedWith: vi.fn(() => false),
+      } as unknown as PlayerView;
+      mockGame.owner = vi.fn(() => enemyPlayer);
+      mockParams.selected = enemyPlayer;
+      expect(
+        rootMenuElement.subMenu!(mockParams).find((i) => i.id === "spy"),
+      ).toBeUndefined();
+
+      const handleSpy = vi.fn();
+      const closeMenu = vi.fn();
+      Object.assign(mockGame, {
+        fogActive: () => true,
+        spyRefusal: () => null,
+        nextSpyCost: () => 100_000n,
+      });
+      const params = {
+        ...mockParams,
+        playerActionHandler: { handleSpy } as any,
+        closeMenu,
+      };
+      const spy = rootMenuElement.subMenu!(params).find((i) => i.id === "spy");
+      expect(spy).toBeDefined();
+      expect(spy!.disabled(params)).toBe(false);
+      spy!.action!(params);
+      expect(handleSpy).toHaveBeenCalledWith(enemyPlayer);
+      expect(closeMenu).toHaveBeenCalled();
+
+      (mockGame as any).spyRefusal = () => "spy_no_gold";
+      const refused = rootMenuElement.subMenu!(params).find(
+        (i) => i.id === "spy",
+      );
+      expect(refused!.disabled(params)).toBe(true);
     });
 
     it("should include info menu in both cases", () => {

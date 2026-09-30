@@ -17,6 +17,7 @@ import {
   rootMenuElement,
   type MenuElementParams,
 } from "../src/client/hud/layers/RadialMenuElements";
+import { NO_FOG } from "./util/viewStubs";
 
 // Minimal stubs to satisfy types used in rootMenuElement.subMenu and allyBreak actions
 const makePlayer = (
@@ -51,6 +52,7 @@ const makeParams = (opts?: Partial<MenuElementParams>): MenuElementParams => {
     game: {
       inSpawnPhase: () => false,
       owner: () => ({ isPlayer: () => false }),
+      ...NO_FOG,
     } as any,
     buildMenu: {
       canBuildOrUpgrade: () => false,

@@ -31,6 +31,7 @@ import {
   SendUpgradeStructureIntentEvent,
 } from "../../Transport";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
+const spyIcon = assetUrl("images/NinjaIconWhite.svg");
 const boatIcon = assetUrl("images/BoatIconWhite.svg");
 const buildIcon = assetUrl("images/BuildIconWhite.svg");
 const chatIcon = assetUrl("images/ChatIconWhite.svg");
@@ -107,6 +108,7 @@ export const COLORS = {
   infoEmoji: "#fbbf24",
   trade: "#0891b2",
   embargo: "#7c3aed",
+  spy: "#9333ea",
   tooltip: {
     cost: "#f59e0b",
     count: "#94a3b8",
@@ -774,6 +776,43 @@ export const centerButtonElement: CenterButtonElement = {
   },
 };
 
+/**
+ * Fog of war: send a spy at the player whose land was clicked, with its
+ * price, or why not, in the tooltip. Built per menu opening (the price
+ * changes).
+ */
+function spyMenuElement(params: MenuElementParams): MenuElement | null {
+  const target = params.selected;
+  if (!params.game.fogActive() || target === null) return null;
+  const refusal = params.game.spyRefusal(target);
+  const cost = renderNumber(params.game.nextSpyCost());
+  return {
+    id: "spy",
+    name: "spy",
+    disabled: () => refusal !== null,
+    icon: spyIcon,
+    color: COLORS.spy,
+    tooltipItems: [
+      {
+        text: translateText("player_panel.send_spy", { cost }),
+        className: "title",
+      },
+      {
+        text: translateText(
+          refusal === null
+            ? "player_panel.send_spy_title"
+            : `player_panel.${refusal}`,
+        ),
+        className: "description",
+      },
+    ],
+    action: (p: MenuElementParams) => {
+      p.playerActionHandler.handleSpy(target);
+      p.closeMenu();
+    },
+  };
+}
+
 export const rootMenuElement: MenuElement = {
   id: "root",
   name: "root",
@@ -813,6 +852,7 @@ export const rootMenuElement: MenuElement = {
             showDonateInsteadOfAttack
               ? donateGoldRadialElement
               : attackMenuElement,
+            spyMenuElement(params),
           ]),
     ];
 

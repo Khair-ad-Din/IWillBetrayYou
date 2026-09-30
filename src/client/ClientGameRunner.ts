@@ -68,6 +68,7 @@ import {
   SendBreakAllianceIntentEvent,
   SendHashEvent,
   SendSpawnIntentEvent,
+  SendSpyIntentEvent,
   SendUpgradeStructureIntentEvent,
   Transport,
 } from "./Transport";
@@ -1214,6 +1215,10 @@ export class ClientGameRunner {
     if (!this.isActive || this.renderer.uiState.ghostStructure !== null) {
       return;
     }
+    if (this.renderer.uiState.spyTargeting) {
+      this.sendSpyAt(event);
+      return;
+    }
     const cell = this.renderer.transformHandler.screenToWorldCoordinates(
       event.x,
       event.y,
@@ -1259,6 +1264,26 @@ export class ClientGameRunner {
       .catch((error) => {
         console.warn("Failed to check boat attack actions:", error);
       });
+  }
+
+  /**
+   * Fog of war, spy button on: sends a spy at the player whose land (as the
+   * player sees it) was clicked. A click on nobody's land keeps the button
+   * on; Esc or a right click turns it off.
+   */
+  private sendSpyAt(event: MouseUpEvent) {
+    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
+      event.x,
+      event.y,
+    );
+    if (!this.gameView.isValidCoord(cell.x, cell.y)) return;
+    const owner = this.gameView.visibleOwner(this.gameView.ref(cell.x, cell.y));
+    if (!owner.isPlayer()) return;
+    const target = owner as PlayerView;
+    if (!this.gameView.knowsPlayer(target)) return;
+    if (this.gameView.spyRefusal(target) !== null) return;
+    this.eventBus.emit(new SendSpyIntentEvent(target));
+    this.renderer.uiState.spyTargeting = false;
   }
 
   private autoUpgradeEvent(event: AutoUpgradeEvent) {

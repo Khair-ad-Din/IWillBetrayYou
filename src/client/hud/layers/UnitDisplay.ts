@@ -1,5 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
+import { assetUrl } from "../../../core/AssetUrls";
+import { SPY_SETTINGS } from "../../../core/configuration/ProvinceConfig";
 import { EventBus } from "../../../core/EventBus";
 import {
   BuildableUnit,
@@ -29,6 +31,8 @@ import {
 } from "../HotbarIcons";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 
+const spyIcon = assetUrl("images/NinjaIconWhite.svg");
+
 @customElement("unit-display")
 export class UnitDisplay extends LitElement implements Controller {
   public game: GameView;
@@ -45,6 +49,7 @@ export class UnitDisplay extends LitElement implements Controller {
   private _samLauncher = 0;
   private allDisabled = false;
   private _hoveredUnit: PlayerBuildableUnitType | null = null;
+  private _spyHovered = false;
   private tutorialHighlight: PlayerBuildableUnitType | null = null;
 
   createRenderRoot() {
@@ -213,6 +218,80 @@ export class UnitDisplay extends LitElement implements Controller {
             "mirv",
             this.keybinds["buildMIRV"]?.key ?? "0",
           )}
+          ${this.renderSpyItem()}
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Fog of war: the spy button. Click it, then click the country to spy
+   * on (ClientGameRunner.sendSpyAt); Esc or a right click cancels.
+   */
+  private renderSpyItem() {
+    if (!this.game.config().fogOfWar()) return html``;
+    const me = this.game.myPlayer();
+    const active = this.game.mySpies().length;
+    const cost = this.game.nextSpyCost();
+    const canSend =
+      me !== null && active < SPY_SETTINGS.maxActive && me.gold() >= cost;
+    const selected = this.uiState.spyTargeting === true;
+    return html`
+      <div
+        class="flex flex-col items-center relative"
+        @mouseenter=${() => {
+          this._spyHovered = true;
+          this.requestUpdate();
+        }}
+        @mouseleave=${() => {
+          this._spyHovered = false;
+          this.requestUpdate();
+        }}
+      >
+        ${this._spyHovered
+          ? html`
+              <div
+                class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-gray-200 text-center w-max max-w-xs text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
+              >
+                <div class="font-bold text-sm mb-1">
+                  ${translateText("spy.map_label")}
+                  (${active}/${SPY_SETTINGS.maxActive})
+                </div>
+                <div class="p-2">
+                  ${translateText("player_panel.send_spy_title")}
+                </div>
+                <div class="px-2 pb-1 text-purple-300">
+                  ${translateText("spy.hotbar_hint")}
+                </div>
+                <div class="flex items-center justify-center gap-1">
+                  <img src=${goldCoinIcon} width="13" height="13" />
+                  <span class="text-yellow-300">${renderNumber(cost)}</span>
+                </div>
+              </div>
+            `
+          : null}
+        <div
+          class="${canSend || selected
+            ? ""
+            : "opacity-40"} border border-slate-500 rounded-sm px-0.5 pb-0.5 flex items-center gap-0.5 cursor-pointer
+             ${selected
+            ? "hover:bg-gray-400/10 bg-purple-500/30"
+            : "hover:bg-gray-800"}
+             rounded-sm text-white"
+          @click=${() => {
+            if (selected) {
+              this.uiState.spyTargeting = false;
+            } else if (canSend) {
+              this.uiState.ghostStructure = null;
+              this.uiState.spyTargeting = true;
+            }
+            this.requestUpdate();
+          }}
+        >
+          <div class="flex items-center gap-0.5 pt-0.5">
+            <img src=${spyIcon} alt="spy" class="align-middle size-5" />
+            <span class="text-xs">${active}</span>
+          </div>
         </div>
       </div>
     `;

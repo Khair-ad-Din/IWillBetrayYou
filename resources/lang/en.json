@@ -1895,6 +1895,7 @@
     "team_percent_tooltip": "{team}: {percent}"
   },
   "spy": {
+    "hotbar_hint": "Then click the country to spy on (Esc cancels)",
     "map_label": "Spy"
   },
   "steam_grant": {
