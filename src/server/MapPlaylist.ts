@@ -23,6 +23,12 @@ import {
 import { logger } from "./Logger";
 import { getMapLandTiles } from "./MapLandTiles";
 
+/**
+ * Fog of war in every game the server publishes on its own (playlist and
+ * ranked), like provinces. Set to false to publish them without fog.
+ */
+const PUBLIC_FOG_OF_WAR = true;
+
 const log = logger.child({});
 
 // Lobby size the Crowded modifier forces on small maps (compact / normal).
@@ -198,6 +204,7 @@ export class MapPlaylist {
       infiniteTroops: false,
       maxTimerValue: undefined,
       instantBuild: false,
+      fogOfWar: PUBLIC_FOG_OF_WAR,
       randomSpawn: false,
       nations:
         mode === GameMode.Team && playerTeams !== HumansVsNations
@@ -473,6 +480,7 @@ export class MapPlaylist {
       infiniteTroops: false,
       maxTimerValue: undefined,
       instantBuild: false,
+      fogOfWar: PUBLIC_FOG_OF_WAR,
       randomSpawn: isRandomSpawn ? true : false,
       nations,
       gameMode: mode,
@@ -509,6 +517,7 @@ export class MapPlaylist {
       infiniteTroops: false,
       maxTimerValue: isCompact ? 10 : 15,
       instantBuild: false,
+      fogOfWar: PUBLIC_FOG_OF_WAR,
       randomSpawn: false,
       nations: "disabled",
       gameMode: GameMode.FFA,
@@ -540,6 +549,7 @@ export class MapPlaylist {
       infiniteTroops: false,
       maxTimerValue: isCompact ? 10 : 15,
       instantBuild: false,
+      fogOfWar: PUBLIC_FOG_OF_WAR,
       randomSpawn: false,
       nations: "disabled",
       gameMode: GameMode.Team,
