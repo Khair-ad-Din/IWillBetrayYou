@@ -2,6 +2,7 @@ import { placeName, placeSpawnName } from "../client/hud/NameBoxCalculator";
 import { Config } from "./configuration/Config";
 import { DoomsdayClockExecution } from "./execution/DoomsdayClockExecution";
 import { Executor } from "./execution/ExecutionManager";
+import { FogOfWarExecution } from "./execution/FogOfWarExecution";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { ResourceSiteExecution } from "./execution/ResourceSiteExecution";
 import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
@@ -187,6 +188,9 @@ export class GameRunner {
     this.game.addExecution(
       new ResourceSiteExecution(simpleHash(this.execManager.gameID())),
     );
+    if (this.game.config().fogOfWar()) {
+      this.game.addExecution(new FogOfWarExecution());
+    }
     if (this.game.config().doomsdayClockConfig().enabled) {
       this.game.addExecution(new DoomsdayClockExecution());
     }

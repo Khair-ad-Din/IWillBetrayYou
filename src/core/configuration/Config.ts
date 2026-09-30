@@ -418,6 +418,9 @@ export class Config {
   waterNukes(): boolean {
     return this._gameConfig.waterNukes ?? false;
   }
+  fogOfWar(): boolean {
+    return this._gameConfig.fogOfWar ?? false;
+  }
   isRandomSpawn(): boolean {
     return this._gameConfig.randomSpawn;
   }

@@ -67,6 +67,15 @@ export class ProvinceState {
     return this.ownerCounts.get(province * OWNER_KEY + smallID) ?? 0;
   }
 
+  /** Calls `fn` once per (province, owner) pair with tiles, owners only. */
+  forEachOwnerCount(
+    fn: (province: number, smallID: number, tiles: number) => void,
+  ): void {
+    for (const [key, tiles] of this.ownerCounts) {
+      fn(Math.floor(key / OWNER_KEY), key % OWNER_KEY, tiles);
+    }
+  }
+
   /** Records a tile changing hands; smallID 0 = unowned. */
   onOwnerChange(tile: TileRef, prev: number, next: number): void {
     const p = this.provinceMap.ids[tile];

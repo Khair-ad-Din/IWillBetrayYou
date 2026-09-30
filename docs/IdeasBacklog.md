@@ -54,23 +54,78 @@ bonificación, cómo se muestran en el mapa y si la IA los tiene en cuenta.
 Una provincia que no se ataca durante un rato gana defensa poco a poco. Los
 frentes estables significan algo y atacar por sorpresa compensa.
 
-## 3. Niebla de guerra (L)
+## 3. Niebla de guerra (L) — diseño decidido, sin empezar
 
-Solo ves el detalle de tus provincias y de las vecinas. Los ataques sorpresa y
-las traiciones pegan mucho más.
+Opción de partida "Niebla de guerra" (sí/no), como las demás de la sala. Sin
+niebla todo funciona como ahora; los espías solo existen con niebla. Es solo
+visual: cada cliente simula la partida entera, así que alguien con las
+herramientas del navegador podría verlo todo (entre amigos da igual).
 
-Por explorar: qué se oculta exactamente (territorio, tropas, edificios,
-unidades), cómo afecta al renderizado y cómo juega la IA sin ver todo el mapa.
+Cada provincia está, para cada jugador, en uno de tres estados:
 
-## 4. Espías (M)
+- **Visible**: todo en vivo. Tus provincias, las vecinas, las de tus aliados,
+  el radio de tus barcos de guerra, puertos y SAM, y las que haya descubierto
+  un espía (para toda la partida).
+- **Recuerdo**: la viste y dejaste de verla (perdiste la frontera, un aliado
+  te traicionó). Se queda congelada como la viste, con velo gris: dueño y
+  edificios.
+- **Desconocida**: aparece como al empezar la partida, sin dueño.
 
-Una unidad o edificio que revela las tropas y los planes de otro jugador
-durante un rato. Tiene mucho más sentido junto con la niebla de guerra (3).
+Aliarse comparte visión; traicionar la corta de golpe.
+
+Reglas:
+
+- **Conocer un país**: en cuanto ves una casilla suya. Los países
+  desconocidos no salen en listas y no puedes aliarte con ellos ni espiarlos.
+- **Clasificación**: solo lo que sabes; lo demás "??".
+- **Ficha y tropas bajo el nombre**: el máximo de tropas se estima con lo
+  conocido (casillas, granjas y ciudades vistas). Las tropas actuales solo se
+  ven en vivo si alguna de sus provincias es visible; si no, el último dato
+  con su antigüedad ("hace 1:20").
+- **Registro de eventos**: solo sobre países que conoces.
+- **Clic en terreno desconocido**: el menú actúa como si fuera tierra de
+  nadie. Se puede atacar a ciegas; la verdad se descubre al llegar.
+- **Nukes**: se ven cuando pasan por tu visión. Si van a por ti, siempre.
+- **Fase de elegir territorio**: se ve todo; la niebla empieza con la
+  partida.
+- **Tu panel de oro/min**: solo lo ve cada uno (ya es así).
+- **IA**: lo ve todo (hace trampa) y debe seguir siendo igual de competente.
+
+El recuerdo se guarda en la simulación, no solo en pantalla, para que no se
+pierda al recargar (Ctrl+F5).
+
+## 4. Espías (M) — diseño decidido, sin empezar
+
+Espía autónomo: eliges un país que conoces, lo mandas y él solo va de
+provincia en provincia (no casilla a casilla), cruzando el mar si hace falta.
+Empieza por las provincias de ese país más cercanas a lo que ya conoces y
+avanza como un frente. Las provincias que atraviesa de camino también se
+revelan.
+
+- Cada provincia que termina queda **visible en vivo para el resto de la
+  partida** (territorio, edificios, ataques, lo que pase en ella), y manda un
+  parte de las tropas actuales del país.
+- Al acabar el país desaparece y libera su hueco. Si el país conquista
+  provincias nuevas, hará falta otro espía para verlas.
+- Detección por provincia investigada: si lo pillan muere (lo descubierto se
+  conserva) y la víctima recibe "X te está espiando".
+- Valores de partida, a ajustar jugando: 15 s por provincia, 100k de oro el
+  primero y cada uno más caro, máximo 3 a la vez, 2 % de detección, sin
+  edificio necesario.
+- La IA no usa espías por ahora.
+
+Para más adelante: sabotaje (parar una mina, robar oro), contraespionaje,
+inteligencia pasiva por barcos de comercio y trenes (revelar la provincia de
+cada puerto o estación extranjera por la que pasan).
 
 ## 5. Alertas en pantalla (S)
 
 Avisos como "te atacan en [provincia]", con un clic para ir allí. Queda mucho
 mejor con nombres de provincia.
+
+Decidido: un sistema mínimo entra junto con los espías (espía capturado, "X
+te está espiando", nuke detectada, "te atacan"), sin nombres de provincia:
+"te atacan en el noroeste" y clic para ir allí.
 
 ## 6. Tropas permanentes en un frente (propuesta propia; sustituiría a la 2)
 

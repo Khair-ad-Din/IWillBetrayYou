@@ -4,6 +4,7 @@ import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID } from "../Schemas";
 import type { ExecRecord, SnapshotWriter } from "../snapshot/SnapshotContext";
 import { formatPlayerDisplayName } from "../Util";
+import type { FogOfWar } from "./FogOfWar";
 import { GameMap, TileRef } from "./GameMap";
 import {
   GameUpdate,
@@ -837,6 +838,9 @@ export interface Game extends GameMap {
   /** Provinces holding a resource site that has not been destroyed. */
   resourceProvinces(): ReadonlySet<number>;
   setResourceProvinces(provinces: ReadonlySet<number>): void;
+  /** Fog of war state, or null when the game option is off. */
+  fogOfWar(): FogOfWar | null;
+  setFogOfWar(fog: FogOfWar | null): void;
   forEachTile(fn: (tile: TileRef) => void): void;
   // Zero-allocation neighbor iteration (cardinal only), in the same N, S, W, E
   // order as neighbors().

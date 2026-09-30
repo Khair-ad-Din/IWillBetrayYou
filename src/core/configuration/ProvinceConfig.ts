@@ -69,6 +69,23 @@ export const RESOURCE_SETTINGS = {
 };
 
 /**
+ * Fog of war (game option): each player sees live only their own provinces,
+ * the provinces next to them, their allies' vision and what their warships,
+ * ports and SAMs can see. Provinces seen before are remembered as they were
+ * last seen; the rest look unclaimed.
+ */
+export const FOG_SETTINGS = {
+  /** Ticks between visibility updates (10 ticks = 1 s). */
+  updateIntervalTicks: 5,
+  /** Tiles around each unit or structure that it sees. */
+  warshipVisionRange: 60,
+  portVisionRange: 50,
+  samVisionRange: 70,
+  /** Spacing, in tiles, of the points sampled inside a vision circle. */
+  visionSampleStep: 3,
+};
+
+/**
  * Gold per tick a mine of `level` pays (simulation and HUD share it). Each
  * level raises the pay by one more growth step than the last one did:
  * start + step * (1 + 2 + ... + (level - 1)).

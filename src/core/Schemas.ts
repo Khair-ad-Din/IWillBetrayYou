@@ -580,6 +580,9 @@ export const GameConfigSchema = z.object({
   // that only know publicIds at create_game); resolved to clientID at lookup.
   nameRevealPublicIds: z.string().array().max(200).optional(),
   waterNukes: z.boolean().nullable().optional(),
+  // Fog of war: players only see their own, neighboring and allied
+  // provinces live (see FogOfWar).
+  fogOfWar: z.boolean().nullable().optional(),
   randomSpawn: z.boolean(),
   maxPlayers: zb.uint().optional(),
   // OFM: allowlist of publicIds allowed to join (admin-only, see create_game).

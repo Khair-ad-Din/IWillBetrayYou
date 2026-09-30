@@ -89,13 +89,15 @@ function expectOnTrack(runner: GameRunner, ref: Reference): void {
 }
 
 const VARIANTS: [string, Partial<GameConfig>][] = [
-  ["free for all", {}],
+  // Fog of war only watches the game (it changes no outcome), so it rides
+  // along here to cover its snapshots over a whole game.
+  ["free for all", { fogOfWar: true }],
   // Water nukes rewrite terrain and the water graph mid-game.
   ["water nukes", { waterNukes: true }],
   ["teams", { gameMode: GameMode.Team, playerTeams: 2 }],
 ];
 
-describe.each(VARIANTS)("full game snapshots: %s", (_, overrides) => {
+describe.each(VARIANTS)("full game snapshots: %s", (variant, overrides) => {
   const start = scriptedGameStart(overrides);
   let reference: Reference;
 
@@ -162,7 +164,7 @@ describe.each(VARIANTS)("full game snapshots: %s", (_, overrides) => {
   test(
     "the game exercised every execution type",
     () => {
-      if (Object.keys(overrides).length > 0) return; // checked once, on FFA
+      if (variant !== "free for all") return; // checked once, on FFA
       // Runs during the spawn phase and finishes inside init, so it is never
       // alive at a tick boundary. BasicExecutions.test.ts covers it directly.
       // SAMMissile lives only a few ticks, so whether one is in flight at a

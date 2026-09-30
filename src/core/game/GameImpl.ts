@@ -70,6 +70,7 @@ import { GameUpdate, GameUpdateType } from "./GameUpdates";
 import { MotionPlanRecord, packMotionPlans } from "./MotionPlans";
 import { PlayerImpl } from "./PlayerImpl";
 import { generateProvinces, ProvinceMap } from "./Provinces";
+import type { FogOfWar } from "./FogOfWar";
 import { ProvinceState } from "./ProvinceState";
 import { RailNetwork } from "./RailNetwork";
 import {
@@ -216,6 +217,14 @@ export class GameImpl implements Game {
   }
   setResourceProvinces(provinces: ReadonlySet<number>): void {
     this._resourceProvinces = provinces;
+  }
+
+  private _fogOfWar: FogOfWar | null = null;
+  fogOfWar(): FogOfWar | null {
+    return this._fogOfWar;
+  }
+  setFogOfWar(fog: FogOfWar | null): void {
+    this._fogOfWar = fog;
   }
 
   /** Recounts province ownership after a restore has set the tile owners. */
