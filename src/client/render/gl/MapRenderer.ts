@@ -50,7 +50,7 @@ export class MapRenderer {
   private provinceIds: Uint16Array | null = null;
   private highlightProvince = 0;
   private attackedProvinces: [number[], number[]] = [[], []];
-  private rememberedProvinces: number[] = [];
+  private fogProvinces: [number[], number[]] = [[], []];
   private resourceSites: ResourceSiteMarker[] = [];
 
   /**
@@ -110,7 +110,7 @@ export class MapRenderer {
       this.renderer.setProvinces(this.provinceIds);
       this.renderer.setHighlightProvince(this.highlightProvince);
       this.renderer.setAttackedProvinces(...this.attackedProvinces);
-      this.renderer.setRememberedProvinces(this.rememberedProvinces);
+      this.renderer.setFogProvinces(...this.fogProvinces);
     }
     this.renderer.setResourceSites(this.resourceSites);
 
@@ -403,9 +403,9 @@ export class MapRenderer {
     this.renderer?.setAttackedProvinces(outgoing, incoming);
   }
   /** Provinces the local player only remembers (fog of war veil). */
-  setRememberedProvinces(provinces: number[]): void {
-    this.rememberedProvinces = provinces;
-    this.renderer?.setRememberedProvinces(provinces);
+  setFogProvinces(remembered: number[], unknown: number[]): void {
+    this.fogProvinces = [remembered, unknown];
+    this.renderer?.setFogProvinces(remembered, unknown);
   }
   /** Unclaimed resource sites, drawn as neutral structures. */
   setResourceSites(sites: ResourceSiteMarker[]): void {

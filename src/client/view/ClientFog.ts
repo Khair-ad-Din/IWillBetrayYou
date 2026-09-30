@@ -123,6 +123,8 @@ export class ClientFog {
 export interface PlayerIntel {
   /** Tiles of theirs the player sees or remembers. */
   tiles: number;
+  /** Extra troop-cap tiles from the farms the player knows of. */
+  bonusTiles: number;
   /** Whether any of their provinces is in sight right now. */
   live: boolean;
   /** Troops when last seen live (current when `live`), or null if never. */

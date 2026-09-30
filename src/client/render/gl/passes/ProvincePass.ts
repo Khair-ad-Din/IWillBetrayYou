@@ -8,7 +8,8 @@
  * and the hovered province (white) get a solid accent stroke with a thin dark
  * rim outside, which keeps them readable next to a similar territory color,
  * and a faint wash; provinces under attack pulse. Under fog of war,
- * provinces the player only remembers get a grey veil.
+ * provinces the player never saw are covered in drifting fog, and those they
+ * only remember get a hatched grey veil.
  * Nothing is drawn until setProvinces() provides the ids.
  */
 
@@ -27,6 +28,7 @@ const FLAG_TEX_WIDTH = 256;
 const FLAG_OUTGOING = 1;
 const FLAG_INCOMING = 2;
 const FLAG_REMEMBERED = 4;
+const FLAG_UNKNOWN = 8;
 
 export class ProvincePass {
   private gl: WebGL2RenderingContext;
@@ -37,6 +39,7 @@ export class ProvincePass {
   private flags = new Uint8Array(FLAG_TEX_WIDTH);
   private attackFlags: [number[], number[]] = [[], []];
   private remembered: number[] = [];
+  private unknown: number[] = [];
   private highlight = 0;
 
   private uCamera: WebGLUniformLocation;
@@ -109,9 +112,10 @@ export class ProvincePass {
     this.rebuildFlags();
   }
 
-  /** Provinces the local player only remembers (fog of war). */
-  setRememberedProvinces(provinces: number[]): void {
-    this.remembered = provinces;
+  /** Fog of war: provinces the local player remembers / never saw. */
+  setFogProvinces(remembered: number[], unknown: number[]): void {
+    this.remembered = remembered;
+    this.unknown = unknown;
     this.rebuildFlags();
   }
 
@@ -125,6 +129,7 @@ export class ProvincePass {
     mark(this.attackFlags[0], FLAG_OUTGOING);
     mark(this.attackFlags[1], FLAG_INCOMING);
     mark(this.remembered, FLAG_REMEMBERED);
+    mark(this.unknown, FLAG_UNKNOWN);
     this.uploadFlags();
   }
 
@@ -145,7 +150,12 @@ export class ProvincePass {
 
   draw(cameraMatrix: Float32Array, zoom: number): void {
     const opacity = this.settings.mapOverlay.provinceBorderOpacity;
-    if (this.provinceTex === null || this.flagTex === null || opacity <= 0) {
+    const fogged = this.remembered.length > 0 || this.unknown.length > 0;
+    if (
+      this.provinceTex === null ||
+      this.flagTex === null ||
+      (opacity <= 0 && !fogged)
+    ) {
       return;
     }
     const gl = this.gl;

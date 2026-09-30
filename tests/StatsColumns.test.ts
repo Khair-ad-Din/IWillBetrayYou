@@ -137,6 +137,7 @@ describe("Stats columns under fog of war", () => {
   };
   const intel = {
     tiles: 1200,
+    bonusTiles: 0,
     live: false,
     troops: 30_000,
     troopsTick: 50,

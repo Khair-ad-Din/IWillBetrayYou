@@ -13,6 +13,7 @@ import {
   type NukeExplosionType,
   TRAIL_EFFECT_TYPES,
 } from "../core/CosmeticSchemas";
+import { ProvinceVisibility } from "../core/game/FogOfWar";
 import { PlayerType } from "../core/game/Game";
 import { ResourceType } from "../core/game/ResourceSites";
 import { decodePatternData } from "../core/PatternDecoder";
@@ -365,7 +366,10 @@ export class WebGLFrameBuilder {
     if (fog.version() !== this.fogVersion || active !== this.fogWasActive) {
       this.fogVersion = fog.version();
       this.fogWasActive = active;
-      this.view.setRememberedProvinces(this.fogFilter.rememberedProvinces());
+      this.view.setFogProvinces(
+        this.fogFilter.provincesShown(ProvinceVisibility.Remembered),
+        this.fogFilter.provincesShown(ProvinceVisibility.Unknown),
+      );
       this.resourceSitesVersion = -1; // re-filter the markers
     }
     return filtered;

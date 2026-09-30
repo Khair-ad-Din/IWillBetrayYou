@@ -1,4 +1,7 @@
-import { FOG_SETTINGS } from "../../../core/configuration/ProvinceConfig";
+import {
+  FOG_SETTINGS,
+  RESOURCE_SETTINGS,
+} from "../../../core/configuration/ProvinceConfig";
 import { ProvinceVisibility } from "../../../core/game/FogOfWar";
 import type {
   ClientFog,
@@ -9,6 +12,7 @@ import { OWNER_MASK } from "../gl/utils/TileCodec";
 import type { FrameData, UnitState } from "../types";
 import {
   UT_ATOM_BOMB,
+  UT_FARM,
   UT_HYDROGEN_BOMB,
   UT_MIRV,
   UT_MIRV_WARHEAD,
@@ -76,6 +80,8 @@ export class FogFilter implements FogPerception {
   >();
   /** Levels of the structures and warships the player sees or remembers. */
   private unitLevels = new Map<number, Map<string, number>>();
+  /** Extra troop-cap tiles from the farms the player knows, per owner. */
+  private farmBonus = new Map<number, number>();
   private active = false;
   private pendingFull = false;
   private viewerID = 0;
@@ -244,8 +250,25 @@ export class FogFilter implements FogPerception {
     }
 
     this.unitLevels = new Map();
+    this.farmBonus = new Map();
     for (const u of units.values()) {
       if (!u.isActive) continue;
+      if (u.unitType === UT_FARM) {
+        // A farm doubles its owner's tiles in its province (as far as the
+        // player knows them) towards the troop cap.
+        const p = this.ids[u.pos];
+        let owned = 0;
+        for (let i = this.offsets[p]; i < this.offsets[p + 1]; i++) {
+          if ((this.display[this.tilesOf[i]] & OWNER_MASK) === u.ownerID) {
+            owned++;
+          }
+        }
+        const extra = owned * (RESOURCE_SETTINGS.farmTileMultiplier - 1);
+        this.farmBonus.set(
+          u.ownerID,
+          (this.farmBonus.get(u.ownerID) ?? 0) + extra,
+        );
+      }
       let levels = this.unitLevels.get(u.ownerID);
       if (levels === undefined) {
         levels = new Map();
@@ -372,6 +395,7 @@ export class FogFilter implements FogPerception {
     const levels = this.unitLevels.get(smallID);
     return {
       tiles: this.knownTiles[smallID],
+      bonusTiles: this.farmBonus.get(smallID) ?? 0,
       live,
       troops: last?.troops ?? null,
       troopsTick: live ? null : (last?.tick ?? null),
@@ -379,12 +403,12 @@ export class FogFilter implements FogPerception {
     };
   }
 
-  /** Provinces the player remembers, for the grey veil. */
-  rememberedProvinces(): number[] {
+  /** Provinces shown as `visibility` (for the fog and the grey veil). */
+  provincesShown(visibility: ProvinceVisibility): number[] {
     const out: number[] = [];
     if (!this.active) return out;
     for (let p = 1; p <= this.count; p++) {
-      if (this.shown[p] === ProvinceVisibility.Remembered) out.push(p);
+      if (this.shown[p] === visibility) out.push(p);
     }
     return out;
   }

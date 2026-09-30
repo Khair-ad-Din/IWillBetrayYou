@@ -232,7 +232,7 @@ describe("FogFilter", () => {
     );
     const out = filter.filter(frame(realTiles(), null), fog, viewer);
     expect(out.tileState[RIGHT]).toBe(7);
-    expect(filter.rememberedProvinces()).toEqual([2]);
+    expect(filter.provincesShown(Remembered)).toEqual([2]);
   });
 
   test("hides what the player cannot see and ghosts remembered buildings", () => {
@@ -362,5 +362,21 @@ describe("FogFilter", () => {
     expect(out.railroadState[LEFT]).toBe(1);
     expect(out.railroadState[RIGHT]).toBe(0);
     expect(out.railroadDirty).toBe(true);
+  });
+
+  test("a known farm doubles its owner's known tiles there for the estimate", () => {
+    fog.apply(
+      update(true, [
+        { viewer: ME, province: 1, visibility: Visible },
+        { viewer: ME, province: 2, visibility: Visible },
+      ]),
+    );
+    // The enemy holds all 8 tiles of province 2, with a farm in it.
+    filter.filter(
+      frame(realTiles(), [], [unit(9, ENEMY, RIGHT, { unitType: "Farm" })]),
+      fog,
+      viewer,
+    );
+    expect(filter.intel(ENEMY)).toMatchObject({ tiles: 8, bonusTiles: 8 });
   });
 });

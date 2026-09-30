@@ -349,7 +349,11 @@ function smallIDOf(p: Player | number): number {
   return typeof p === "number" ? p : p.smallID();
 }
 
-/** Provinces that share a land border, per province id. */
+/**
+ * Neighboring provinces, per province id: those sharing a land border, and
+ * those facing each other across at most FOG_SETTINGS.neighborWaterGap water
+ * tiles (rivers, narrow straits), scanning rows and columns.
+ */
 function provinceAdjacency(game: Game): number[][] {
   const provinces = game.provinces();
   const ids = provinces.map().ids;
@@ -370,6 +374,36 @@ function provinceAdjacency(game: Game): number[][] {
       if (p === NO_PROVINCE) continue;
       if (x + 1 < w) link(p, ids[row + x + 1]);
       if (y + 1 < h) link(p, ids[row + w + x]);
+    }
+  }
+
+  const gap = Math.max(0, Math.floor(FOG_SETTINGS.neighborWaterGap));
+  // From each land tile facing water, walk across the water (right, then
+  // down) and link the province found on the far bank, if close enough.
+  const acrossWater = (p: number, start: number, step: number, n: number) => {
+    let t = start;
+    for (let i = 0; i < n && i < gap; i++, t += step) {
+      if (map.isLand(t)) {
+        link(p, ids[t]);
+        return;
+      }
+    }
+    if (n > gap && map.isLand(t)) link(p, ids[t]);
+  };
+  if (gap > 0) {
+    for (let y = 0; y < h; y++) {
+      const row = y * w;
+      for (let x = 0; x < w; x++) {
+        const t = row + x;
+        const p = ids[t];
+        if (p === NO_PROVINCE) continue;
+        if (x + 1 < w && !map.isLand(t + 1)) {
+          acrossWater(p, t + 1, 1, w - x - 1);
+        }
+        if (y + 1 < h && !map.isLand(t + w)) {
+          acrossWater(p, t + w, w, h - y - 1);
+        }
+      }
     }
   }
   return sets.map((s) => [...s].sort((a, b) => a - b));

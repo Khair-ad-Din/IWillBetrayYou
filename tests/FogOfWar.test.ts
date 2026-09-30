@@ -284,3 +284,55 @@ describe("fog of war updates for the clients", () => {
     });
   });
 });
+
+describe("fog of war across rivers and straits", () => {
+  test("provinces facing each other across a little water are neighbors", async () => {
+    const world = await setup("world", { fogOfWar: true }, [human("carol")]);
+    const carol = world.player("carol");
+    const provinces = world.provinces();
+    const map = world.map();
+    const w = map.width();
+
+    const landNeighbors = (p: number) => {
+      const out = new Set<number>();
+      for (const t of provinces.tilesOf(p)) {
+        world.forEachNeighbor(t, (nb) => out.add(provinces.provinceOf(nb)));
+      }
+      return out;
+    };
+
+    // Find two provinces a short stretch of water apart (along a row) that
+    // share no land border.
+    let pair: [number, number] | null = null;
+    for (let t = 0; t < map.width() * map.height() && pair === null; t++) {
+      const p = provinces.provinceOf(t);
+      if (p === 0 || t % w === w - 1 || map.isLand(t + 1)) continue;
+      let u = t + 1;
+      let water = 0;
+      while (!map.isLand(u) && water < FOG_SETTINGS.neighborWaterGap) {
+        u++;
+        water++;
+      }
+      const q = provinces.provinceOf(u);
+      if (
+        water >= 2 &&
+        map.isLand(u) &&
+        q !== 0 &&
+        q !== p &&
+        !landNeighbors(p).has(q)
+      ) {
+        pair = [p, q];
+      }
+    }
+    expect(pair).not.toBeNull();
+    const [p, q] = pair!;
+
+    for (const t of provinces.tilesOf(p)) carol.conquer(t);
+    const exec = new FogOfWarExecution();
+    world.addExecution(exec);
+    for (let i = 0; i < 3 && !world.fogOfWar()?.isStarted(); i++) {
+      world.executeNextTick();
+    }
+    expect(world.fogOfWar()!.visibility(carol, q)).toBe(Visible);
+  });
+});

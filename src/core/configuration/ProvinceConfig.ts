@@ -77,6 +77,11 @@ export const RESOURCE_SETTINGS = {
 export const FOG_SETTINGS = {
   /** Ticks between visibility updates (10 ticks = 1 s). */
   updateIntervalTicks: 5,
+  /**
+   * Provinces facing each other across at most this many water tiles
+   * (rivers, narrow straits) count as neighbors, so they reveal each other.
+   */
+  neighborWaterGap: 10,
   /** Tiles around each unit or structure that it sees. */
   warshipVisionRange: 60,
   portVisionRange: 50,

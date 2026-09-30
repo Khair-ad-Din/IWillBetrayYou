@@ -57,7 +57,7 @@ export function shownMaxTroops(game: GameView, player: PlayerView): number {
     type: () => player.type(),
     isLobbyCreator: () => player.isLobbyCreator(),
     numTilesOwned: () => intel.tiles,
-    bonusTroopTiles: () => 0,
+    bonusTroopTiles: () => intel.bonusTiles,
     units: () =>
       cityLevels > 0
         ? [{ isUnderConstruction: () => false, level: () => cityLevels }]
