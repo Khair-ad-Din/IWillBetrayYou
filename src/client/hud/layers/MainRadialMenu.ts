@@ -130,8 +130,13 @@ export class MainRadialMenu implements Controller {
   ) {
     this.buildMenu.playerBuildables = actions.buildableUnits;
 
-    const tileOwner = this.game.owner(tile);
-    const recipient = tileOwner.isPlayer() ? (tileOwner as PlayerView) : null;
+    // Under fog of war, unknown land acts as unclaimed: the menu must not
+    // give its owner away (attacks there still reach the real owner).
+    const tileOwner = this.game.visibleOwner(tile);
+    const recipient =
+      tileOwner.isPlayer() && this.game.knowsPlayer(tileOwner as PlayerView)
+        ? (tileOwner as PlayerView)
+        : null;
 
     if (recipient) {
       this.chatIntegration.setupChatModal(myPlayer, recipient);

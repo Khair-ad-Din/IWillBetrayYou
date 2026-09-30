@@ -124,3 +124,43 @@ describe("Stats column registry", () => {
     expect(columnById("tiles").cell(emptyRow, game)).toBe("0.0%");
   });
 });
+
+describe("Stats columns under fog of war", () => {
+  const player = {
+    smallID: () => 2,
+    type: () => "HUMAN",
+    isLobbyCreator: () => false,
+    numTilesOwned: () => 5000,
+    gold: () => 900n,
+    troops: () => 70_000,
+    totalUnitLevels: () => 4,
+  };
+  const intel = {
+    tiles: 1200,
+    live: false,
+    troops: 30_000,
+    troopsTick: 50,
+    unitLevels: (type: string) => (type === "City" ? 1 : 0),
+  };
+  const game = {
+    intel: () => intel,
+    ticks: () => 100,
+    config: () => stubConfig(),
+  };
+  const value = (id: Parameters<typeof columnById>[0]) =>
+    columnById(id).value!(player as never, game as never);
+
+  it("shows only what the local player knows", () => {
+    expect(value("tiles")).toBe(1200);
+    expect(value("troops")).toBe(30_000);
+    expect(value("cities")).toBe(1);
+    expect(value("gold")).toBeNaN();
+    expect(value("goldIncomePerMin")).toBeNaN();
+  });
+
+  it("renders hidden values as ??", () => {
+    expect(
+      columnById("gold").cell({ ...emptyRow, value: NaN }, game as never),
+    ).toBe("??");
+  });
+});

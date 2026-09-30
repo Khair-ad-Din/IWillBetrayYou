@@ -28,6 +28,12 @@ import {
 } from "../../Utils";
 import { GameView, PlayerView, UnitView } from "../../view";
 import {
+  shownGold,
+  shownMaxTroops,
+  shownTroops,
+  shownUnitLevels,
+} from "../../view/FogIntel";
+import {
   EMOJI_ICON_KIND,
   getFirstPlacePlayer,
   getPlayerIcons,
@@ -148,9 +154,10 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     const tile = this.game.ref(worldCoord.x, worldCoord.y);
     if (!tile) return;
 
-    const owner = this.game.owner(tile);
+    // Under fog of war, what the player sees there (unknown land is empty).
+    const owner = this.game.visibleOwner(tile);
 
-    if (owner && owner.isPlayer()) {
+    if (owner && owner.isPlayer() && this.game.knowsPlayer(owner)) {
       this.player = owner as PlayerView;
       this.player.profile().then((p) => {
         this.playerProfile = p;
@@ -160,6 +167,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
       const units = this.game
         .units(UnitType.Warship, UnitType.TradeShip, UnitType.TransportShip)
         .filter((u) => euclideanDistWorld(worldCoord, u.tile(), this.game) < 50)
+        .filter((u) => this.game.unitSeen(u))
         .sort(distSortUnitWorld(worldCoord, this.game));
 
       if (units.length > 0) {
@@ -220,7 +228,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
             src=${icon}
             class="w-3 h-3 lg:w-4 lg:h-4 object-contain shrink-0"
           />
-          <span>${player.totalUnitLevels(type)}</span>
+          <span>${shownUnitLevels(this.game, player, type)}</span>
         </div>`
       : "";
   }
@@ -361,12 +369,18 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     let betrayalHtml: TemplateResult | null = null;
     const firstPlace = getFirstPlacePlayer(this.game);
     const playerIcons = getPlayerIcons({ game: this.game, player, firstPlace });
-    const maxTroops = this.game.config().maxTroops(player);
-    const attackingTroops = player
-      .outgoingAttacks()
-      .map((a) => a.troops)
-      .reduce((a, b) => a + b, 0);
-    const totalTroops = player.troops();
+    // Under fog of war, only what the local player knows (FogIntel).
+    const fogged = this.game.intel(player) !== null;
+    const maxTroops = shownMaxTroops(this.game, player);
+    const attackingTroops = fogged
+      ? 0
+      : player
+          .outgoingAttacks()
+          .map((a) => a.troops)
+          .reduce((a, b) => a + b, 0);
+    const shown = shownTroops(this.game, player);
+    const totalTroops = shown.troops;
+    const gold = shownGold(this.game, player);
 
     let playerType = "";
     switch (player.type()) {
@@ -459,7 +473,9 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
               translate="no"
             >
               <img src=${goldCoinIcon} width="13" height="13" />
-              <span class="px-0.5">${renderNumber(player.gold())}</span>
+              <span class="px-0.5"
+                >${gold === null ? "??" : renderNumber(gold)}</span
+              >
             </div>
             <div
               class="flex flex-1 flex-col items-center justify-center text-xs font-bold ${attackingTroops >
@@ -484,7 +500,12 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
             </div>
           </div>
           <div class="w-28 md:w-36" translate="no">
-            ${this.renderTroopBar(totalTroops, attackingTroops, maxTroops)}
+            ${this.renderTroopBar(
+              totalTroops,
+              attackingTroops,
+              maxTroops,
+              shown.ageSeconds,
+            )}
           </div>
         </div>
         <!-- Right: Player identity + Units below -->
@@ -558,12 +579,13 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
   }
 
   private renderTroopBar(
-    totalTroops: number,
+    totalTroops: number | null,
     attackingTroops: number,
     maxTroops: number,
+    ageSeconds = 0,
   ) {
     const base = Math.max(maxTroops, 1);
-    const greenPercentRaw = (totalTroops / base) * 100;
+    const greenPercentRaw = ((totalTroops ?? 0) / base) * 100;
     const orangePercentRaw = (attackingTroops / base) * 100;
 
     const greenPercent = Math.max(0, Math.min(100, greenPercentRaw));
@@ -592,7 +614,13 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
           translate="no"
         >
           <span class="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-            >${renderTroops(totalTroops)}</span
+            >${totalTroops === null
+              ? "??"
+              : renderTroops(totalTroops)}${ageSeconds > 0
+              ? html`<span class="text-[10px] text-white/60">
+                  (${renderDuration(ageSeconds)})</span
+                >`
+              : ""}</span
           >
           <span class="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
             >${renderTroops(maxTroops)}</span

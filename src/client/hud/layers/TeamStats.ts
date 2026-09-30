@@ -26,6 +26,8 @@ export function aggregateTeamValues(
 
   for (const player of players) {
     if (!player.isAlive()) continue;
+    // Under fog of war, players never seen add nothing.
+    if (!game.knowsPlayer(player)) continue;
     // Keep the gold-rate tracker fed even when only the team table renders,
     // otherwise its rate columns read back 0.
     recordGoldRates(player, game);

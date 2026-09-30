@@ -160,11 +160,15 @@ export abstract class StatsTable extends LitElement {
     this.rows =
       orderable.length === 0 || sortKey === null
         ? rows
-        : rows.sort(
-            (a, b) =>
-              direction *
-              ((a.values.get(sortKey) ?? 0) - (b.values.get(sortKey) ?? 0)),
-          );
+        : rows.sort((a, b) => {
+            const av = a.values.get(sortKey) ?? 0;
+            const bv = b.values.get(sortKey) ?? 0;
+            // NaN is a value hidden by fog of war: always last.
+            if (Number.isNaN(av) || Number.isNaN(bv)) {
+              return Number(Number.isNaN(av)) - Number(Number.isNaN(bv));
+            }
+            return direction * (av - bv);
+          });
     this.requestUpdate();
   }
 

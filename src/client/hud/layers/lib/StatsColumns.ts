@@ -8,6 +8,12 @@ import {
 } from "../../../Utils";
 import type { GameView, PlayerView } from "../../../view";
 import {
+  shownMaxTroops,
+  shownTiles,
+  shownTroops,
+  shownUnitLevels,
+} from "../../../view/FogIntel";
+import {
   allianceIcon,
   cityIcon,
   claimIcon,
@@ -79,15 +85,26 @@ export interface ColumnDef {
 type ColumnInput = Pick<ColumnDef, "id" | "labelKey" | "cell"> &
   Partial<Omit<ColumnDef, "id" | "labelKey" | "cell" | "isOrderable">>;
 
+/** A value hidden by fog of war: its cell shows "??" and sorts last. */
+export const HIDDEN_VALUE = Number.NaN;
+
 function defineColumn(input: ColumnInput): ColumnDef {
+  const cell = input.cell;
   return {
     width: "auto",
     align: "end",
     kinds: ["player", "team"],
     isHideable: true,
     ...input,
+    cell: (row, game) => (Number.isNaN(row.value) ? "??" : cell(row, game)),
     isOrderable: input.value !== undefined,
   };
+}
+
+/** A getter that returns HIDDEN_VALUE for other players under fog of war. */
+function hiddenUnderFog(live: ValueGetter): ValueGetter {
+  return (player, game) =>
+    game.intel(player) === null ? live(player, game) : HIDDEN_VALUE;
 }
 
 function unitColumn(
@@ -101,7 +118,7 @@ function unitColumn(
     labelKey,
     headerVisual: { kind: "icon", src: icon },
     align: "center",
-    value: (player) => player.totalUnitLevels(unitType),
+    value: (player, game) => shownUnitLevels(game, player, unitType),
     cell: (row) => renderNumber(row.value),
   });
 }
@@ -194,7 +211,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     id: "tiles",
     labelKey: "leaderboard.owned",
     headerVisual: { kind: "icon", src: claimIcon, white: true },
-    value: (player) => player.numTilesOwned(),
+    value: (player, game) => shownTiles(game, player),
     cell: (row, game) => {
       const validTiles = game.numLandTiles() - game.numTilesWithFallout();
       return formatPercentage(validTiles > 0 ? row.value / validTiles : 0);
@@ -205,7 +222,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     labelKey: "leaderboard.gold",
     headerVisual: { kind: "icon", src: goldCoinIcon },
     // Gold is a bigint, but game values remain safely below Number.MAX_SAFE_INTEGER.
-    value: (player) => Number(player.gold()),
+    value: hiddenUnderFog((player) => Number(player.gold())),
     cell: (row) => renderNumber(row.value),
   }),
   defineColumn({
@@ -216,7 +233,9 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
       src: goldCoinIcon,
       superscript: { text: "/m" },
     },
-    value: (player) => goldRateTracker.goldIncomePerMin(player.smallID()),
+    value: hiddenUnderFog((player) =>
+      goldRateTracker.goldIncomePerMin(player.smallID()),
+    ),
     cell: (row) => renderNumber(row.value),
   }),
   defineColumn({
@@ -227,7 +246,9 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
       src: portIcon,
       superscript: { text: "/m" },
     },
-    value: (player) => goldRateTracker.shipTradeGoldPerMin(player.smallID()),
+    value: hiddenUnderFog((player) =>
+      goldRateTracker.shipTradeGoldPerMin(player.smallID()),
+    ),
     cell: (row) => renderNumber(row.value),
   }),
   defineColumn({
@@ -238,7 +259,9 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
       src: warshipIcon,
       superscript: { text: "/m" },
     },
-    value: (player) => goldRateTracker.piracyGoldPerMin(player.smallID()),
+    value: hiddenUnderFog((player) =>
+      goldRateTracker.piracyGoldPerMin(player.smallID()),
+    ),
     cell: (row) => renderNumber(row.value),
   }),
   defineColumn({
@@ -249,14 +272,16 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
       src: factoryIcon,
       superscript: { text: "/m" },
     },
-    value: (player) => goldRateTracker.trainTradeGoldPerMin(player.smallID()),
+    value: hiddenUnderFog((player) =>
+      goldRateTracker.trainTradeGoldPerMin(player.smallID()),
+    ),
     cell: (row) => renderNumber(row.value),
   }),
   defineColumn({
     id: "troops",
     labelKey: "leaderboard.troops",
     headerVisual: troopHeaderVisual,
-    value: (player) => player.troops(),
+    value: (player, game) => shownTroops(game, player).troops ?? HIDDEN_VALUE,
     cell: (row) => renderTroops(row.value),
   }),
   defineColumn({
@@ -266,7 +291,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
       ...troopHeaderVisual,
       superscript: { src: upperLimitIcon, white: true },
     },
-    value: (player, game) => game.config().maxTroops(player),
+    value: (player, game) => shownMaxTroops(game, player),
     cell: (row) => renderTroops(row.value),
   }),
   unitColumn("cities", "leaderboard.cities", UnitType.City, cityIcon),

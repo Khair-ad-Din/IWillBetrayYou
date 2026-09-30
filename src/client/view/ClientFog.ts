@@ -118,3 +118,27 @@ export class ClientFog {
     return v;
   }
 }
+
+/** What the local player knows of another player under fog of war. */
+export interface PlayerIntel {
+  /** Tiles of theirs the player sees or remembers. */
+  tiles: number;
+  /** Whether any of their provinces is in sight right now. */
+  live: boolean;
+  /** Troops when last seen live (current when `live`), or null if never. */
+  troops: number | null;
+  /** Tick of that sighting; null while live or never seen. */
+  troopsTick: number | null;
+  /** Levels of their structures (or count of warships) the player knows. */
+  unitLevels(unitType: string): number;
+}
+
+/** The fog as drawn on the map (FogFilter), for the rest of the UI. */
+export interface FogPerception {
+  isActive(): boolean;
+  /** Owner smallID of a tile as the local player sees it. */
+  displayedOwner(tile: number): number;
+  /** Whether the local player sees what is on a tile right now. */
+  tileSeen(tile: number): boolean;
+  intel(smallID: number): PlayerIntel;
+}

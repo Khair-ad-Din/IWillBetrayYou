@@ -17,23 +17,26 @@ export class PlayerStats extends StatsTable {
   ): StatsRow[] {
     const myPlayer = game.myPlayer();
 
-    return game
-      .playerViews()
-      .filter((player) => player.isAlive())
-      .map((player) => ({
-        key: player.id(),
-        name: player.name(),
-        clanTag: player.clanTag(),
-        values: columnValues(player, game, columns),
-        emphasized:
-          myPlayer !== null &&
-          (player === myPlayer || player.isOnSameTeam(myPlayer)),
-        pinned: player === myPlayer,
-        onClick: () => {
-          if (this.eventBus !== null) {
-            this.eventBus.emit(new GoToPlayerEvent(player));
-          }
-        },
-      }));
+    return (
+      game
+        .playerViews()
+        // Under fog of war, only the players this one has seen.
+        .filter((player) => player.isAlive() && game.knowsPlayer(player))
+        .map((player) => ({
+          key: player.id(),
+          name: player.name(),
+          clanTag: player.clanTag(),
+          values: columnValues(player, game, columns),
+          emphasized:
+            myPlayer !== null &&
+            (player === myPlayer || player.isOnSameTeam(myPlayer)),
+          pinned: player === myPlayer,
+          onClick: () => {
+            if (this.eventBus !== null) {
+              this.eventBus.emit(new GoToPlayerEvent(player));
+            }
+          },
+        }))
+    );
   }
 }

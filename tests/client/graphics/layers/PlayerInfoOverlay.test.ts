@@ -40,6 +40,7 @@ vi.mock("../../../../src/client/hud/PlayerIcons", () => ({
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PlayerInfoOverlay } from "../../../../src/client/hud/layers/PlayerInfoOverlay";
 import { PlayerType } from "../../../../src/core/game/Game";
+import { NO_FOG } from "../../../util/viewStubs";
 
 // Flattens the mocked-html template tree into one string for assertions.
 function flatten(node: unknown): string {
@@ -78,7 +79,9 @@ describe("PlayerInfoOverlay", () => {
     isValidCoord: () => true,
     ref: () => 42,
     owner: () => hovered,
+    visibleOwner: () => hovered,
     myPlayer: () => myPlayer,
+    ...NO_FOG,
     config: () => ({
       isUnitDisabled: () => true,
       maxTroops: () => 1000,

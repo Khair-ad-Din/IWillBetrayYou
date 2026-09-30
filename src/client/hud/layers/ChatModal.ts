@@ -294,7 +294,11 @@ export class ChatModal extends LitElement {
       console.log("Sent message:", sender);
       this.players = this.g
         .players()
-        .filter((p) => p.isAlive() && p.type() !== PlayerType.Bot);
+        // Under fog of war, only players this one has seen.
+        .filter(
+          (p) =>
+            p.isAlive() && p.type() !== PlayerType.Bot && this.g.knowsPlayer(p),
+        );
 
       this.recipient = recipient;
       this.sender = sender;
@@ -328,7 +332,11 @@ export class ChatModal extends LitElement {
     if (sender && recipient) {
       this.players = this.g
         .players()
-        .filter((p) => p.isAlive() && p.type() !== PlayerType.Bot);
+        // Under fog of war, only players this one has seen.
+        .filter(
+          (p) =>
+            p.isAlive() && p.type() !== PlayerType.Bot && this.g.knowsPlayer(p),
+        );
 
       this.recipient = recipient;
       this.sender = sender;

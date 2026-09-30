@@ -33,6 +33,7 @@ vi.mock("../../../../src/client/InGameModal", () => ({
 
 import { PlayerPanel } from "../../../../src/client/hud/layers/PlayerPanel";
 import { PlayerView } from "../../../../src/client/view";
+import { NO_FOG } from "../../../util/viewStubs";
 
 describe("PlayerPanel - alliance countdown keeps updating after local player death", () => {
   let panel: PlayerPanel;
@@ -55,7 +56,9 @@ describe("PlayerPanel - alliance countdown keeps updating after local player dea
     } as unknown as PlayerView;
     return {
       owner: () => null,
+      visibleOwner: () => null,
       myPlayer: () => myPlayer,
+      ...NO_FOG,
       ticks: () => 100,
     };
   }

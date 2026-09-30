@@ -14,7 +14,6 @@ import { UnitType } from "../../core/game/Game";
 import { Controller } from "../Controller";
 import { MouseMoveEvent } from "../InputHandler";
 import { MapRenderer } from "../render/gl";
-import { OWNER_MASK } from "../render/gl/utils/TileCodec";
 import { TransformHandler } from "../TransformHandler";
 import { GameView, UnitView } from "../view";
 
@@ -59,7 +58,8 @@ export class HoverHighlightController implements Controller {
       this.game.isLand(ref) ? this.view.provinceAt(ref) : 0,
     );
     if (this.game.isLand(ref)) {
-      ownerID = this.game.tileState(ref) & OWNER_MASK;
+      // Under fog of war, the owner the player sees there.
+      ownerID = this.game.visibleOwner(ref).smallID();
     } else if (this.navalHighlightEnabled()) {
       // Avoid square root for performance; 50 tile radius = 2500 tiles²
       let closestUnit: UnitView | null = null;
@@ -69,6 +69,7 @@ export class HoverHighlightController implements Controller {
         UnitType.TradeShip,
         UnitType.TransportShip,
       )) {
+        if (!this.game.unitSeen(u)) continue;
         const distSquared = this.game.euclideanDistSquared(ref, u.tile());
         if (distSquared < closestDistSquared) {
           closestDistSquared = distSquared;

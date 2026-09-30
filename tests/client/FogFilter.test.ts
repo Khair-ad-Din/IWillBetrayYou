@@ -1,7 +1,13 @@
 import { FogFilter, FogViewer } from "../../src/client/render/frame/FogFilter";
-import type { FrameData, UnitState } from "../../src/client/render/types";
+import type {
+  FrameData,
+  PlayerState,
+  PlayerStatusData,
+  UnitState,
+} from "../../src/client/render/types";
 import { ClientFog } from "../../src/client/view/ClientFog";
 import { ProvinceVisibility } from "../../src/core/game/FogOfWar";
+import { UnitType } from "../../src/core/game/Game";
 import {
   FogOfWarUpdate,
   GameUpdateType,
@@ -72,13 +78,14 @@ function frame(
   tileState: Uint16Array,
   changedTiles: number[] | null,
   units: UnitState[] = [],
+  extra: Partial<FrameData> = {},
 ): FrameData {
   return {
     tick: 1,
     inSpawnPhase: false,
     tileState,
     trailState: new Uint16Array(W * H),
-    railroadState: new Uint8Array(0),
+    railroadState: new Uint8Array(W * H),
     units: new Map(units.map((u) => [u.id, u])),
     players: new Map(),
     names: new Map([
@@ -100,6 +107,7 @@ function frame(
     nukeTelegraphs: [],
     attackRings: [],
     structuresDirty: false,
+    ...extra,
   } as FrameData;
 }
 
@@ -239,7 +247,7 @@ describe("FogFilter", () => {
             owner: ENEMY,
             tick: 1,
             structures: [
-              { type: "City", tile: RIGHT + W, owner: ENEMY, level: 2 },
+              { type: UnitType.City, tile: RIGHT + W, owner: ENEMY, level: 2 },
             ],
           },
         },
@@ -292,5 +300,67 @@ describe("FogFilter", () => {
     filter.filter(frame(realTiles(), []), fog, viewer);
     expect(filter.tileKnown(LEFT)).toBe(true);
     expect(filter.tileKnown(RIGHT)).toBe(false);
+  });
+
+  test("tracks what the player knows of each other player", () => {
+    fog.apply(update(true, [{ viewer: ME, province: 1, visibility: Visible }]));
+    const players = new Map([
+      [ENEMY, { smallID: ENEMY, troops: 500 } as PlayerState],
+    ]);
+    // The enemy holds a tile in the visible province: seen live.
+    const real = realTiles();
+    real[1] = ENEMY;
+    filter.filter(frame(real, [], [], { players }), fog, viewer);
+    let intel = filter.intel(ENEMY);
+    expect(intel).toMatchObject({ tiles: 1, live: true, troops: 500 });
+
+    // Out of sight: the last figure stays, with the tick it was seen.
+    real[1] = ME;
+    const later = { ...frame(real, [1], [], { players }), tick: 9 };
+    filter.filter(later, fog, viewer);
+    intel = filter.intel(ENEMY);
+    expect(intel).toMatchObject({
+      tiles: 0,
+      live: false,
+      troops: 500,
+      troopsTick: 1,
+    });
+  });
+
+  test("names show troops as last seen, ?? (-1) if never, and no crown", () => {
+    fog.apply(update(true, [{ viewer: ME, province: 1, visibility: Visible }]));
+    const players = new Map([
+      [ME, { smallID: ME, troops: 100 } as PlayerState],
+      [ENEMY, { smallID: ENEMY, troops: 500 } as PlayerState],
+    ]);
+    const playerStatus = new Map([
+      [ENEMY, { crown: true } as PlayerStatusData],
+      [ME, { crown: true } as PlayerStatusData],
+    ]);
+    const out = filter.filter(
+      frame(realTiles(), [], [], { players, playerStatus }),
+      fog,
+      viewer,
+    );
+    expect(out.players.get(ME)!.troops).toBe(100);
+    expect(out.players.get(ENEMY)!.troops).toBe(-1);
+    expect(out.playerStatus.get(ENEMY)!.crown).toBe(false);
+    expect(out.playerStatus.get(ME)!.crown).toBe(true);
+  });
+
+  test("trails and railroads only show where the player sees or knows", () => {
+    fog.apply(update(true, [{ viewer: ME, province: 1, visibility: Visible }]));
+    const trailState = new Uint16Array(W * H).fill(3);
+    const railroadState = new Uint8Array(W * H).fill(1);
+    const out = filter.filter(
+      frame(realTiles(), null, [], { trailState, railroadState }),
+      fog,
+      viewer,
+    );
+    expect(out.trailState[LEFT]).toBe(3);
+    expect(out.trailState[RIGHT]).toBe(0);
+    expect(out.railroadState[LEFT]).toBe(1);
+    expect(out.railroadState[RIGHT]).toBe(0);
+    expect(out.railroadDirty).toBe(true);
   });
 });

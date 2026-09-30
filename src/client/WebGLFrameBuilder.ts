@@ -335,6 +335,7 @@ export class WebGLFrameBuilder {
       const ids = this.view.provinceIdMap();
       if (ids === null) return frame;
       this.fogFilter = new FogFilter(ids, gameView.width(), gameView.height());
+      gameView.setFogPerception(this.fogFilter);
     }
 
     const me = gameView.myPlayer();

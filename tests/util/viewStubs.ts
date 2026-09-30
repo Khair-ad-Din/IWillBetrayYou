@@ -29,6 +29,18 @@ import { Player, PlayerCosmetics } from "../../src/core/Schemas";
 import { WorkerClient } from "../../src/core/worker/WorkerClient";
 
 /** Theme stub — returns deterministic colors so PlayerView's color math works. */
+/**
+ * The fog-of-war queries of GameView as a game without fog answers them, for
+ * hand-built GameView fakes (spread it in; add visibleOwner if the code under
+ * test reads tile owners).
+ */
+export const NO_FOG = {
+  fogActive: () => false,
+  knowsPlayer: () => true,
+  intel: () => null,
+  unitSeen: () => true,
+};
+
 export function stubTheme(): Theme {
   const white = colord("#ffffff");
   const grey = colord("#808080");

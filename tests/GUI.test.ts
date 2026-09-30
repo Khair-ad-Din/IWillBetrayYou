@@ -8,6 +8,9 @@ class MockGameView {
   ownerID() {
     return this.ownerId;
   }
+  visibleOwner() {
+    return { smallID: () => this.ownerId };
+  }
   playerBySmallID(id: number) {
     return id === this.ownerId && this.ownerId !== 0
       ? { displayName: () => `MockPlayer${id}` }

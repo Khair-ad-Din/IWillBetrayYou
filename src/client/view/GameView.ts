@@ -44,7 +44,7 @@ import { TrailManager } from "../render/frame/TrailManager";
 import type { FrameData, NameEntry } from "../render/types";
 import { STRUCTURE_TYPES } from "../render/types";
 import { resolveTeamClanTag } from "../Utils";
-import { ClientFog } from "./ClientFog";
+import { ClientFog, FogPerception, PlayerIntel } from "./ClientFog";
 import type { CosmeticVisibility } from "./CosmeticVisibility";
 import { PlayerView } from "./PlayerView";
 import { UnitView } from "./UnitView";
@@ -1156,9 +1156,60 @@ export class GameView implements GameMap {
   // those who stay, but the server archives the record at that point.
   // Resource sites as last sent by the simulation (after the spawn phase).
   private readonly _fog = new ClientFog();
+  private _fogPerception: FogPerception | null = null;
   /** The fog of war as the simulation reports it (inactive without fog). */
   fog(): ClientFog {
     return this._fog;
+  }
+  /** Set by the renderer once it draws the fog. */
+  setFogPerception(perception: FogPerception | null): void {
+    this._fogPerception = perception;
+  }
+  /** Whether the local player's view is fogged right now. */
+  fogActive(): boolean {
+    return this._fogPerception?.isActive() ?? false;
+  }
+  /**
+   * Owner of a tile as the local player sees it: under fog of war, unknown
+   * land looks unclaimed and remembered land shows its remembered owner.
+   * Use it for anything shown to the player; owner() for game logic.
+   */
+  visibleOwner(tile: TileRef): PlayerView | TerraNullius {
+    const perception = this._fogPerception;
+    if (perception === null || !perception.isActive()) return this.owner(tile);
+    return this.playerBySmallID(perception.displayedOwner(tile));
+  }
+  /** Whether the local player can see `unit` right now (fog of war). */
+  unitSeen(unit: UnitView): boolean {
+    const perception = this._fogPerception;
+    const me = this._myPlayer;
+    if (perception === null || !perception.isActive() || me === null) {
+      return true;
+    }
+    const owner = unit.owner();
+    return (
+      owner === me || me.isFriendly(owner) || perception.tileSeen(unit.tile())
+    );
+  }
+  /** Whether the local player has seen `player` (always true without fog). */
+  knowsPlayer(player: PlayerView): boolean {
+    const me = this._myPlayer;
+    if (!this.fogActive() || me === null) return true;
+    return this._fog.knows(me.smallID(), player.smallID());
+  }
+  /**
+   * What the local player knows of `player` under fog of war, or null when
+   * they may see everything about them (no fog, themselves, allies and
+   * teammates).
+   */
+  intel(player: PlayerView): PlayerIntel | null {
+    const me = this._myPlayer;
+    const perception = this._fogPerception;
+    if (perception === null || !perception.isActive() || me === null) {
+      return null;
+    }
+    if (player === me || me.isFriendly(player)) return null;
+    return perception.intel(player.smallID());
   }
 
   private _resourceSites: ResourceSitesUpdate["sites"] = [];

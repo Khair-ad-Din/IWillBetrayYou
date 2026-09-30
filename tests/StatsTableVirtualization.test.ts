@@ -1,6 +1,7 @@
 import { PlayerStats } from "../src/client/hud/layers/PlayerStats";
 import type { GameView, PlayerView } from "../src/client/view";
 import { UserSettings } from "../src/core/game/UserSettings";
+import { NO_FOG } from "./util/viewStubs";
 
 function player(id: string, tiles: number): PlayerView {
   return {
@@ -30,6 +31,7 @@ function gameWith(players: PlayerView[], me: PlayerView | null): GameView {
     ticks: () => 600,
     numLandTiles: () => 100,
     numTilesWithFallout: () => 0,
+    ...NO_FOG,
   } as unknown as GameView;
 }
 

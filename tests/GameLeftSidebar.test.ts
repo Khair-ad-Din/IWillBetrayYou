@@ -5,6 +5,7 @@ import type { GameView, PlayerView } from "../src/client/view";
 import { EventBus } from "../src/core/EventBus";
 import { GameMode } from "../src/core/game/Game";
 import { UserSettings } from "../src/core/game/UserSettings";
+import { NO_FOG } from "./util/viewStubs";
 
 describe("GameLeftSidebar", () => {
   beforeEach(() => {
@@ -17,6 +18,7 @@ describe("GameLeftSidebar", () => {
   it("owns the player and team stats tables", async () => {
     const game = {
       config: () => ({ gameConfig: () => ({ gameMode: GameMode.Team }) }),
+      ...NO_FOG,
     } as unknown as GameView;
     const eventBus = new EventBus();
     const sidebar = new GameLeftSidebar();
@@ -65,6 +67,8 @@ describe("GameLeftSidebar", () => {
       numLandTiles: () => 100,
       ticks: () => 600,
       numTilesWithFallout: () => 0,
+      ...NO_FOG,
+      ...NO_FOG,
       playerViews: () => [player],
     } as unknown as GameView;
     const sidebar = new GameLeftSidebar();
@@ -92,6 +96,7 @@ describe("GameLeftSidebar", () => {
   it("stacks the player and team stats tables vertically at every width", async () => {
     const game = {
       config: () => ({ gameConfig: () => ({ gameMode: GameMode.Team }) }),
+      ...NO_FOG,
     } as unknown as GameView;
     const sidebar = new GameLeftSidebar();
     sidebar.game = game;

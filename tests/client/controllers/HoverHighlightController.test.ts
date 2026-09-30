@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HoverHighlightController } from "../../../src/client/controllers/HoverHighlightController";
 import { MouseMoveEvent } from "../../../src/client/InputHandler";
 import { setup } from "../../util/Setup";
+import { NO_FOG } from "../../util/viewStubs";
 
 describe("HoverHighlightController", () => {
   let game: any;
@@ -16,6 +17,10 @@ describe("HoverHighlightController", () => {
       { infiniteGold: true, instantBuild: true },
       [new PlayerInfo("player1", PlayerType.Human, null, "player1_id")],
     );
+    // The controller takes a GameView; the core game stands in, unfogged.
+    Object.assign(game, NO_FOG, {
+      visibleOwner: (tile: number) => game.owner(tile),
+    });
 
     eventBus = { on: vi.fn() };
     transformHandler = {

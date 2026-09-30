@@ -1,6 +1,10 @@
 import { FOG_SETTINGS } from "../../../core/configuration/ProvinceConfig";
 import { ProvinceVisibility } from "../../../core/game/FogOfWar";
-import type { ClientFog } from "../../view/ClientFog";
+import type {
+  ClientFog,
+  FogPerception,
+  PlayerIntel,
+} from "../../view/ClientFog";
 import { OWNER_MASK } from "../gl/utils/TileCodec";
 import type { FrameData, UnitState } from "../types";
 import {
@@ -48,7 +52,7 @@ const SEA_CELL = 16;
  *
  * Returns the frame untouched while the viewer is not fogged.
  */
-export class FogFilter {
+export class FogFilter implements FogPerception {
   private readonly count: number;
   private readonly offsets: Int32Array;
   private readonly tilesOf: Int32Array;
@@ -56,10 +60,22 @@ export class FogFilter {
   private readonly seaCells: number[][];
   private readonly cellsW: number;
   private readonly display: Uint16Array;
+  private readonly trails: Uint16Array;
+  private railroads: Uint8Array | null = null;
   /** Visibility the display currently reflects, per province. */
   private readonly shown: Uint8Array;
   /** Whether the display holds what the player last saw of a province. */
   private readonly frozen: Uint8Array;
+  /** Display tiles per owner smallID, and those in Visible provinces. */
+  private readonly knownTiles = new Int32Array(OWNER_MASK + 1);
+  private readonly liveTiles = new Int32Array(OWNER_MASK + 1);
+  /** Troops of each player when last seen live. */
+  private readonly lastTroops = new Map<
+    number,
+    { troops: number; tick: number }
+  >();
+  /** Levels of the structures and warships the player sees or remembers. */
+  private unitLevels = new Map<number, Map<string, number>>();
   private active = false;
   private pendingFull = false;
   private viewerID = 0;
@@ -115,6 +131,7 @@ export class FogFilter {
     }
 
     this.display = new Uint16Array(ids.length);
+    this.trails = new Uint16Array(ids.length);
     this.shown = new Uint8Array(count + 1);
     this.frozen = new Uint8Array(count + 1);
   }
@@ -134,7 +151,12 @@ export class FogFilter {
       if (this.active) {
         // Leaving the fog (e.g. the game ended): repaint everything live.
         this.active = false;
-        return { ...frame, changedTiles: null, structuresDirty: true };
+        return {
+          ...frame,
+          changedTiles: null,
+          structuresDirty: true,
+          railroadDirty: true,
+        };
       }
       return frame;
     }
@@ -160,15 +182,33 @@ export class FogFilter {
     } else {
       changedTiles = [];
       for (const p of drained.provinces) {
+        if (p <= 0 || p > this.count) continue;
+        this.account(p, -1);
         if (this.applyProvince(p, real, fog, changedTiles)) {
           structuresDirty = true;
         }
+        this.account(p, 1);
       }
       const ids = this.ids;
       const shown = this.shown;
       for (const t of frame.changedTiles) {
         const p = ids[t];
-        if (p === 0 || shown[p] === ProvinceVisibility.Visible) {
+        if (p === 0) {
+          this.display[t] = real[t];
+          changedTiles.push(t);
+        } else if (shown[p] === ProvinceVisibility.Visible) {
+          const before = this.display[t] & OWNER_MASK;
+          const after = real[t] & OWNER_MASK;
+          if (before !== after) {
+            if (before !== 0) {
+              this.knownTiles[before]--;
+              this.liveTiles[before]--;
+            }
+            if (after !== 0) {
+              this.knownTiles[after]++;
+              this.liveTiles[after]++;
+            }
+          }
           this.display[t] = real[t];
           changedTiles.push(t);
         }
@@ -203,6 +243,25 @@ export class FogFilter {
       }
     }
 
+    this.unitLevels = new Map();
+    for (const u of units.values()) {
+      if (!u.isActive) continue;
+      let levels = this.unitLevels.get(u.ownerID);
+      if (levels === undefined) {
+        levels = new Map();
+        this.unitLevels.set(u.ownerID, levels);
+      }
+      levels.set(u.unitType, (levels.get(u.unitType) ?? 0) + u.level);
+    }
+    for (const state of frame.players.values()) {
+      if (this.liveTiles[state.smallID] > 0) {
+        this.lastTroops.set(state.smallID, {
+          troops: state.troops,
+          tick: frame.tick,
+        });
+      }
+    }
+
     const names = new Map(frame.names);
     for (const [key, n] of frame.names) {
       const smallID = viewer.smallIDOf(n.playerID);
@@ -218,8 +277,63 @@ export class FogFilter {
       }
     }
 
+    // Trails (boat wakes, nuke paths) only where the player sees.
+    const fullTrails = changedTiles === null;
+    let trailMin = frame.trailDirtyRowMin;
+    let trailMax = frame.trailDirtyRowMax;
+    if (fullTrails) {
+      trailMin = 0;
+      trailMax = this.mapH - 1;
+    }
+    for (let y = Math.max(0, trailMin); y <= trailMax && y < this.mapH; y++) {
+      const row = y * this.mapW;
+      for (let t = row; t < row + this.mapW; t++) {
+        const v = frame.trailState[t];
+        this.trails[t] = v !== 0 && this.tileSeen(t) ? v : 0;
+      }
+    }
+
+    // Railroads only in provinces the player knows; redrawn when the fog
+    // moves too.
+    const fogMoved = changedTiles === null || drained.provinces.length > 0;
+    const railroadDirty =
+      frame.railroadDirty || fogMoved || this.railroads === null;
+    if (railroadDirty) {
+      const rails = (this.railroads ??= new Uint8Array(this.ids.length));
+      const real = frame.railroadState;
+      for (let t = 0; t < rails.length; t++) {
+        rails[t] = real[t] !== 0 && this.tileKnown(t) ? real[t] : 0;
+      }
+    }
+
+    // The crown marks the leader: only for players the fog does not hide.
+    const playerStatus = new Map(frame.playerStatus);
+    for (const [id, status] of frame.playerStatus) {
+      if (status.crown && !viewer.isFriendly(id)) {
+        playerStatus.set(id, { ...status, crown: false });
+      }
+    }
+
+    // Troops under other players' names: as last seen, -1 if never.
+    const players = new Map(frame.players);
+    for (const [key, state] of frame.players) {
+      if (viewer.isFriendly(state.smallID)) continue;
+      const troops = this.lastTroops.get(state.smallID)?.troops ?? -1;
+      if (troops !== state.troops) players.set(key, { ...state, troops });
+    }
+
     return {
       ...frame,
+      players,
+      playerStatus,
+      trailState: this.trails,
+      trailDirtyRowMin: trailMin,
+      trailDirtyRowMax: trailMax,
+      railroadState: this.railroads ?? frame.railroadState,
+      railroadDirty,
+      revealedRailTiles: frame.revealedRailTiles.filter((t) =>
+        this.tileKnown(t),
+      ),
       tileState: this.display,
       changedTiles,
       structuresDirty,
@@ -248,6 +362,23 @@ export class FogFilter {
     };
   }
 
+  displayedOwner(tile: number): number {
+    return this.display[tile] & OWNER_MASK;
+  }
+
+  intel(smallID: number): PlayerIntel {
+    const last = this.lastTroops.get(smallID);
+    const live = this.liveTiles[smallID] > 0;
+    const levels = this.unitLevels.get(smallID);
+    return {
+      tiles: this.knownTiles[smallID],
+      live,
+      troops: last?.troops ?? null,
+      troopsTick: live ? null : (last?.tick ?? null),
+      unitLevels: (unitType) => levels?.get(unitType) ?? 0,
+    };
+  }
+
   /** Provinces the player remembers, for the grey veil. */
   rememberedProvinces(): number[] {
     const out: number[] = [];
@@ -266,13 +397,31 @@ export class FogFilter {
   }
 
   private rebuild(real: Uint16Array, fog: ClientFog, restart: boolean): void {
-    if (restart) this.frozen.fill(0);
+    if (restart) {
+      this.frozen.fill(0);
+      this.lastTroops.clear();
+    }
+    this.knownTiles.fill(0);
+    this.liveTiles.fill(0);
     for (let p = 1; p <= this.count; p++) {
       this.applyProvince(p, real, fog, null);
+      this.account(p, 1);
     }
     const ids = this.ids;
     for (let t = 0; t < ids.length; t++) {
       if (ids[t] === 0) this.display[t] = real[t];
+    }
+  }
+
+  /** Adds (sign 1) or removes (-1) province `p` from the per-owner counts. */
+  private account(p: number, sign: number): void {
+    const live = this.shown[p] === ProvinceVisibility.Visible;
+    const tiles = this.tilesOf;
+    for (let i = this.offsets[p]; i < this.offsets[p + 1]; i++) {
+      const owner = this.display[tiles[i]] & OWNER_MASK;
+      if (owner === 0) continue;
+      this.knownTiles[owner] += sign;
+      if (live) this.liveTiles[owner] += sign;
     }
   }
 
@@ -338,7 +487,7 @@ export class FogFilter {
   }
 
   /** Whether the player sees what is on `tile` right now. */
-  private tileSeen(tile: number): boolean {
+  tileSeen(tile: number): boolean {
     const p = this.ids[tile];
     if (p !== 0) return this.shown[p] === ProvinceVisibility.Visible;
     const x = tile % this.mapW;

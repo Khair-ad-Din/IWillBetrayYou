@@ -12,6 +12,7 @@ import { ShowEmojiMenuEvent } from "../../../src/client/InputHandler";
 import type { MapRenderer } from "../../../src/client/render/gl";
 import type { GameView } from "../../../src/client/view";
 import { EventBus } from "../../../src/core/EventBus";
+import { NO_FOG } from "../../util/viewStubs";
 
 // Every custom element createRenderer looks up with document.querySelector.
 const HUD_TAGS = [
@@ -77,7 +78,9 @@ describe("createRenderer", () => {
       ref: () => 1,
       hasOwner: () => true,
       owner: () => ({}),
+      visibleOwner: () => ({}),
       myPlayer: () => ({}),
+      ...NO_FOG,
       config: () => ({
         gameConfig: () => ({}),
         isReplay: () => false,

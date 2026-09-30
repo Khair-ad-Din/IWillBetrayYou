@@ -30,11 +30,14 @@ export class EmojiTable extends LitElement {
         return;
       }
 
-      const targetPlayer = this.game.owner(tile);
+      // Under fog of war, the owner the player sees there (unknown land
+      // looks unclaimed), and only if the player has seen them.
+      const targetPlayer = this.game.visibleOwner(tile);
       // maybe redundant due to owner check but better safe than sorry
       if (targetPlayer instanceof TerraNulliusImpl) {
         return;
       }
+      if (!this.game.knowsPlayer(targetPlayer as PlayerView)) return;
 
       this.showTable((emoji) => {
         const recipient =

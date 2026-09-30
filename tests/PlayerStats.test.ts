@@ -9,6 +9,7 @@ import { PlayerStats } from "../src/client/hud/layers/PlayerStats";
 import { columnsFor } from "../src/client/hud/layers/lib/StatsColumns";
 import type { GameView, PlayerView } from "../src/client/view";
 import { UserSettings } from "../src/core/game/UserSettings";
+import { NO_FOG } from "./util/viewStubs";
 
 function player(
   id: string,
@@ -51,6 +52,8 @@ describe("PlayerStats", () => {
       ticks: () => 600,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
+      ...NO_FOG,
+      ...NO_FOG,
     } as unknown as GameView;
     const playerStats = new PlayerStats();
     playerStats.game = game;
@@ -88,6 +91,8 @@ describe("PlayerStats", () => {
       ticks: () => 600,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
+      ...NO_FOG,
+      ...NO_FOG,
     } as unknown as GameView;
     const playerStats = new PlayerStats();
     playerStats.game = game;
@@ -145,6 +150,8 @@ describe("PlayerStats", () => {
       ticks: () => 600,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
+      ...NO_FOG,
+      ...NO_FOG,
     } as unknown as GameView;
     const playerStats = new PlayerStats();
     playerStats.game = game;
@@ -204,6 +211,8 @@ describe("PlayerStats clan column", () => {
       ticks: () => 600,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
+      ...NO_FOG,
+      ...NO_FOG,
     } as unknown as GameView;
     const playerStats = new PlayerStats();
     playerStats.game = game;

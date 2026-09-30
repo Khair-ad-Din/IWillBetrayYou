@@ -40,6 +40,7 @@ import {
   translateText,
 } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
+import { shownGold, shownTroops } from "../../view/FogIntel";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import "./PlayerModerationModal";
@@ -142,7 +143,7 @@ export class PlayerPanel extends LitElement implements Controller {
 
   async tick() {
     if (this.isVisible && this.tile) {
-      const owner = this.g.owner(this.tile);
+      const owner = this.g.visibleOwner(this.tile);
       if (owner && owner.isPlayer()) {
         const pv = owner as PlayerView;
         const id = pv.id();
@@ -626,6 +627,9 @@ export class PlayerPanel extends LitElement implements Controller {
   }
 
   private renderResources(other: PlayerView) {
+    // Under fog of war, only what the local player knows (FogIntel).
+    const gold = shownGold(this.g, other);
+    const troops = shownTroops(this.g, other);
     return html`
       <div class="mb-1 flex justify-between gap-2">
         <div
@@ -634,7 +638,7 @@ export class PlayerPanel extends LitElement implements Controller {
         >
           <span class="mr-0.5">💰</span>
           <span translate="no" class="tabular-nums w-[5ch] font-semibold">
-            ${renderNumber(other.gold() || 0)}
+            ${gold === null ? "??" : renderNumber(gold || 0)}
           </span>
           <span class="text-zinc-200 whitespace-nowrap">
             ${translateText("player_panel.gold")}</span
@@ -647,7 +651,7 @@ export class PlayerPanel extends LitElement implements Controller {
         >
           <span class="mr-0.5">🛡️</span>
           <span translate="no" class="tabular-nums w-[5ch] font-semibold">
-            ${renderTroops(other.troops() || 0)}
+            ${troops.troops === null ? "??" : renderTroops(troops.troops || 0)}
           </span>
           <span class="text-zinc-200 whitespace-nowrap">
             ${translateText("player_panel.troops")}</span
@@ -718,7 +722,8 @@ export class PlayerPanel extends LitElement implements Controller {
   }
 
   private renderAlliances(other: PlayerView) {
-    const allies = other.allies();
+    // Under fog of war, only allies the local player has seen.
+    const allies = other.allies().filter((a) => this.g.knowsPlayer(a));
 
     // Map ally PlayerID → expiry tick so each ally shows its own remaining time.
     const expiryByAlly = new Map<string, number>();
@@ -977,8 +982,9 @@ export class PlayerPanel extends LitElement implements Controller {
     if (!my && !isSpectator) return html``;
     if (!this.tile) return html``;
 
-    const owner = this.g.owner(this.tile);
-    if (!owner || !owner.isPlayer()) {
+    // Under fog of war, the owner the player sees there.
+    const owner = this.g.visibleOwner(this.tile);
+    if (!owner || !owner.isPlayer() || !this.g.knowsPlayer(owner)) {
       this.hide();
       console.warn("Tile is not owned by a player");
       return html``;

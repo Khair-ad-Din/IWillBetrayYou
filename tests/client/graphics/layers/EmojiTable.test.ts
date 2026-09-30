@@ -11,6 +11,7 @@ import type { GameView } from "../../../../src/client/view";
 import { EventBus } from "../../../../src/core/EventBus";
 import { AllPlayers } from "../../../../src/core/game/Game";
 import { flattenedEmojiTable } from "../../../../src/core/Util";
+import { NO_FOG } from "../../../util/viewStubs";
 
 describe("EmojiTable event bus wiring", () => {
   let table: EmojiTable;
@@ -30,7 +31,9 @@ describe("EmojiTable event bus wiring", () => {
       ref: (x: number, y: number) => x + y,
       hasOwner: () => true,
       owner: () => tileOwner,
+      visibleOwner: () => tileOwner,
       myPlayer: () => myPlayer,
+      ...NO_FOG,
     } as unknown as GameView;
     document.body.appendChild(table);
 

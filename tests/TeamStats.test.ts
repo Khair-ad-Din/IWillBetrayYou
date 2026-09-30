@@ -7,6 +7,7 @@ import type { GameView, PlayerView } from "../src/client/view";
 import { PlayerType } from "../src/core/game/Game";
 import { UserSettings } from "../src/core/game/UserSettings";
 import { playerInfo, setup } from "./util/Setup";
+import { NO_FOG } from "./util/viewStubs";
 
 describe("aggregateTeamValues", () => {
   it("sums values for alive players only", async () => {
@@ -30,7 +31,7 @@ describe("aggregateTeamValues", () => {
         aggregateTeamValues(
           game.allPlayers() as unknown as PlayerView[],
           [columnById("tiles"), columnById("gold")],
-          game as unknown as GameView,
+          Object.assign(game, NO_FOG) as unknown as GameView,
         ),
       ),
     ).toEqual({ tiles: 20, gold: 80 });
@@ -47,7 +48,7 @@ describe("aggregateTeamValues", () => {
         aggregateTeamValues(
           game.allPlayers() as unknown as PlayerView[],
           [columnById("rank"), columnById("player"), columnById("tiles")],
-          game as unknown as GameView,
+          Object.assign(game, NO_FOG) as unknown as GameView,
         ),
       ),
     ).toEqual({ tiles: 1 });
@@ -96,6 +97,8 @@ describe("TeamStats", () => {
       ticks: () => 600,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
+      ...NO_FOG,
+      ...NO_FOG,
     } as unknown as GameView;
     const teamStats = new TeamStats();
     teamStats.game = game;

@@ -335,7 +335,8 @@ export class AttacksDisplay extends LitElement implements Controller {
   private getBoatTargetName(boat: UnitView): string {
     const target = boat.targetTile();
     if (target === undefined) return "";
-    const ownerID = this.game.ownerID(target);
+    // Under fog of war, the owner the player sees at the target.
+    const ownerID = this.game.visibleOwner(target).smallID();
     if (ownerID === 0) return translateText("help_modal.ui_wilderness");
     const player = this.game.playerBySmallID(ownerID) as PlayerView;
     return player?.displayName() ?? "";
