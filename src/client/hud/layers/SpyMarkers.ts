@@ -10,7 +10,8 @@ import { translateText } from "../../Utils";
 import { GameView } from "../../view";
 
 const spyIcon = assetUrl("images/NinjaIconWhite.svg");
-const SIZE = 36;
+const SIZE = 58;
+const ICON = 28;
 
 interface Marker {
   spy: SpyView;
@@ -102,18 +103,23 @@ export class SpyMarkers extends LitElement implements Controller {
       );
       const selected = this.uiState?.selectedSpy === m.spy.id;
       const progress = m.spy.progress;
-      // The ring: full while idle or moving, filling while investigating.
+      // Drawn like a structure: the owner's structure colors, light fill
+      // with a dark outline and icon.
+      const colors = this.game.myPlayer()?.structureColors();
+      const light = colors?.light.toRgbString() ?? "#d8b4fe";
+      const dark = colors?.dark.toRgbString() ?? "#3b0764";
+      // A purple ring fills around it while it investigates.
       const ring =
         progress === null
-          ? "conic-gradient(#c084fc 0 100%)"
-          : `conic-gradient(#f5d0fe ${progress}%, rgba(76, 29, 149, 0.55) 0)`;
+          ? "transparent"
+          : `conic-gradient(#c084fc ${progress}%, rgba(46, 16, 101, 0.55) 0)`;
       return html`<div
         class="fixed z-[900] cursor-pointer rounded-full flex items-center justify-center"
         style="left:${p.x - SIZE / 2}px; top:${p.y - SIZE / 2}px;
           width:${SIZE}px; height:${SIZE}px; background:${ring};
-          box-shadow:${selected
-          ? "0 0 0 3px #fff, 0 0 10px 3px #c084fc"
-          : "0 1px 4px rgba(0,0,0,0.6)"};"
+          filter:${selected
+          ? "drop-shadow(0 0 6px #fff) drop-shadow(0 0 3px #fff)"
+          : "drop-shadow(0 1px 2px rgba(0,0,0,0.6))"};"
         title=${translateText("spy.marker_title")}
         @click=${(e: MouseEvent) => {
           e.stopPropagation();
@@ -127,9 +133,14 @@ export class SpyMarkers extends LitElement implements Controller {
         <div
           class="rounded-full flex items-center justify-center"
           style="width:${SIZE - 12}px; height:${SIZE - 12}px;
-            background:#7e22ce;"
+            background:${light}; border:3px solid ${dark};
+            box-sizing:border-box;"
         >
-          <img src=${spyIcon} alt="spy" style="width:17px; height:17px;" />
+          <div
+            style="width:${ICON}px; height:${ICON}px; background:${dark};
+              -webkit-mask:url(${spyIcon}) center / contain no-repeat;
+              mask:url(${spyIcon}) center / contain no-repeat;"
+          ></div>
         </div>
       </div>`;
     })}`;
