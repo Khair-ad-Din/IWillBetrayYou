@@ -30,6 +30,8 @@ export interface Spy {
   investigating: boolean;
   /** Ticks left of the investigation. */
   ticksLeft: number;
+  /** Explores on its own whenever it has nothing to do. */
+  auto: boolean;
 }
 
 /** Why a spy cannot be bought or sent (null: it can). */
@@ -55,7 +57,12 @@ export type SpyRefusal =
  *
  * After each investigation it may be caught (detectionPerMille): it dies,
  * what it found stays found, and both players are told. With nothing left
- * to do it waits where it is for new orders.
+ * to do it waits where it is for new orders, unless it is on automatic:
+ * then it keeps exploring on its own (see autoNext). A manual order turns
+ * automatic off.
+ *
+ * A spy gives no vision just by being somewhere: only what it has finished
+ * investigating is revealed.
  *
  * Deterministic: integer positions, and the catch roll is seeded from the
  * spy, province and tick.
@@ -129,18 +136,6 @@ export class SpyNetwork {
     return this.game.ref(Math.floor(spy.x / SCALE), Math.floor(spy.y / SCALE));
   }
 
-  /** Provinces `owner` sees through their spies right now. */
-  seenBy(owner: number): number[] {
-    const provinces = this.game.provinces();
-    const out: number[] = [];
-    for (const s of this.spies) {
-      if (s.owner !== owner) continue;
-      const p = provinces.provinceOf(this.tileOf(s));
-      if (p !== NO_PROVINCE) out.push(p);
-    }
-    return out;
-  }
-
   canBuy(owner: Player, tile: TileRef): SpyRefusal | null {
     if (this.game.owner(tile) !== owner) return "no_land";
     if (this.aliveCount(owner) >= SPY_SETTINGS.costs.length) {
@@ -168,6 +163,7 @@ export class SpyNetwork {
       goal: NO_PROVINCE,
       investigating: false,
       ticksLeft: 0,
+      auto: false,
     };
     this.spies.push(spy);
     return spy;
@@ -184,6 +180,7 @@ export class SpyNetwork {
     );
     if (spy === undefined || !this.game.isValidRef(tile)) return;
     this.stop(spy);
+    spy.auto = false;
 
     const p = this.game.provinces().provinceOf(tile);
     if (p !== NO_PROVINCE && this.fog.visibility(owner, p) !== VISIBLE) {
@@ -235,6 +232,7 @@ export class SpyNetwork {
       }
     }
     this.stop(best);
+    best.auto = false;
     best.mission = "country";
     best.target = target.smallID();
     if (this.nextGoal(best)) return true;
@@ -242,16 +240,31 @@ export class SpyNetwork {
     return false;
   }
 
-  /** Moves every spy on by one tick. */
-  tick(): void {
+  /** Turns automatic exploring on or off for `owner`'s spy `spyID`. */
+  setAuto(owner: Player, spyID: number, auto: boolean): void {
+    const spy = this.spies.find(
+      (s) => s.id === spyID && s.owner === owner.smallID(),
+    );
+    if (spy === undefined) return;
+    spy.auto = auto;
+    if (!auto && spy.mission === "province") this.stop(spy);
+  }
+
+  /**
+   * Moves every spy on by one tick. Returns whether any revealed a
+   * province (the fog should then be updated right away).
+   */
+  tick(): boolean {
     const tick = this.game.ticks();
     const dead = new Set<Spy>();
+    let revealed = false;
     for (const spy of this.spies) {
       const owner = this.game.playerBySmallID(spy.owner);
       if (!owner.isPlayer() || !owner.isAlive()) {
         dead.add(spy);
         continue;
       }
+      if (spy.auto && this.isIdle(spy)) this.autoNext(spy);
       if (spy.mission === "country") {
         const target = this.game.playerBySmallID(spy.target);
         if (!target.isPlayer() || !target.isAlive()) {
@@ -269,6 +282,7 @@ export class SpyNetwork {
           continue;
         }
         this.fog.reveal(spy.owner, spy.goal);
+        revealed = true;
         if (spy.mission === "country" && this.nextGoal(spy)) continue;
         const target = this.game.playerBySmallID(spy.target);
         if (spy.mission === "country") {
@@ -285,6 +299,62 @@ export class SpyNetwork {
       }
     }
     if (dead.size > 0) this.spies = this.spies.filter((s) => !dead.has(s));
+    return revealed;
+  }
+
+  private isIdle(spy: Spy): boolean {
+    return spy.mission === "none" && spy.x === spy.destX && spy.y === spy.destY;
+  }
+
+  /**
+   * Automatic: explores the closest province its owner does not see live,
+   * next to what they already know. Unknown provinces come first; then the
+   * remembered ones, the longest unseen first (to refresh them).
+   */
+  private autoNext(spy: Spy): void {
+    const count = this.game.provinces().count();
+    const revealed = this.fog.revealedBy(spy.owner);
+    const unknown: number[] = [];
+    const remembered: number[] = [];
+    for (let p = 1; p <= count; p++) {
+      if (revealed.has(p) || this.game.provinces().size(p) === 0) continue;
+      const v = this.fog.visibility(spy.owner, p);
+      if (v === VISIBLE) continue;
+      if (v === 0) unknown.push(p);
+      else remembered.push(p);
+    }
+    const nextToKnown = (p: number) =>
+      this.neighbors[p].some((q) => this.fog.visibility(spy.owner, q) !== 0);
+    const closest = (list: number[]) => {
+      let best = NO_PROVINCE;
+      let bestD = Infinity;
+      for (const p of list) {
+        const d = this.dist2To(spy, this.centers[p] as TileRef);
+        if (d < bestD) {
+          bestD = d;
+          best = p;
+        }
+      }
+      return best;
+    };
+
+    let goal = closest(unknown.filter(nextToKnown));
+    if (goal === NO_PROVINCE && remembered.length > 0) {
+      // The one seen longest ago, the closest among equals.
+      let oldest = Infinity;
+      for (const p of remembered) {
+        oldest = Math.min(oldest, this.fog.memory(spy.owner, p)?.tick ?? 0);
+      }
+      goal = closest(
+        remembered.filter(
+          (p) => (this.fog.memory(spy.owner, p)?.tick ?? 0) === oldest,
+        ),
+      );
+    }
+    if (goal === NO_PROVINCE) goal = closest(unknown);
+    if (goal === NO_PROVINCE) return;
+    spy.mission = "province";
+    this.headFor(spy, goal);
   }
 
   /** State for snapshots. */

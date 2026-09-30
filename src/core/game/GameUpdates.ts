@@ -152,6 +152,12 @@ export interface SpyView {
   y: number;
   moving: boolean;
   mission: "none" | "country" | "province";
+  /** smallID of the country it spies on (country missions), else 0. */
+  target: number;
+  /** Province it is investigating right now, else 0. */
+  province: number;
+  /** Exploring on its own. */
+  auto: boolean;
   /** Percent of the investigation under way, or null if not investigating. */
   progress: number | null;
 }

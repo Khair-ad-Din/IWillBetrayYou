@@ -31,6 +31,7 @@ const HUD_TAGS = [
   "replay-panel",
   "gold-income-panel",
   "spy-markers",
+  "spy-panel",
   "game-right-sidebar",
   "settings-modal",
   "graphics-settings-modal",

@@ -119,8 +119,16 @@ El espía es una unidad que se mueve por el mapa como un barco:
   - Desde el menú del clic derecho o el panel de un país: manda a tu espía
     más cercano a espiar ese país.
 - Investigar una provincia tarda 7,5 s fijos; el anillo del icono se llena
-  mientras tanto. Lo investigado queda visible en vivo el resto de la
-  partida, y ves en vivo la provincia en la que está el espía.
+  mientras tanto. Al empezar se ve su territorio; sus edificios van
+  apareciendo uno a uno mientras investiga, y al terminar queda visible en
+  vivo el resto de la partida. Estar en un sitio no da visión: solo lo que
+  termina de investigar.
+- **Automático**: explora solo la provincia más cercana que no ves en vivo,
+  pegada a lo que conoces; primero las desconocidas y luego las recordadas
+  más antiguas. Se apaga al darle una orden a mano.
+- **Ventana de espías** (bajo la del oro): qué hace cada uno, botón para
+  centrar la cámara en él y botón de automático. Clic en una fila lo
+  selecciona para darle una orden.
 - Al acabar una misión se queda quieto esperando órdenes. Detección: 2 % al
   terminar cada provincia; si lo pillan muere (lo descubierto se conserva) y
   los dos jugadores reciben un aviso.

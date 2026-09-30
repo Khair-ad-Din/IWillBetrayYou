@@ -16,7 +16,9 @@ export type SpyCommand =
   /** Buy a spy and place it on one's own tile. */
   | { kind: "buy"; tile: number }
   /** Order a spy at a tile: explore, spy on its country, or move. */
-  | { kind: "order"; spyID: number; tile: number };
+  | { kind: "order"; spyID: number; tile: number }
+  /** Turn a spy's automatic exploring on or off. */
+  | { kind: "auto"; spyID: number; auto: boolean };
 
 /** Carries out one spy command. */
 export class SpyExecution implements Execution {
@@ -49,6 +51,9 @@ export class SpyExecution implements Execution {
         break;
       case "order":
         spies.order(this.player, c.spyID, c.tile as TileRef);
+        break;
+      case "auto":
+        spies.setAuto(this.player, c.spyID, c.auto);
         break;
     }
   }
@@ -86,6 +91,7 @@ const SpyStateSchema = z.object({
     z.object({ kind: z.literal("send"), targetID: z.string() }),
     z.object({ kind: z.literal("buy"), tile: zTile() }),
     z.object({ kind: z.literal("order"), spyID: zInt(), tile: zTile() }),
+    z.object({ kind: z.literal("auto"), spyID: zInt(), auto: z.boolean() }),
   ]),
 });
 type SpyState = z.infer<typeof SpyStateSchema>;

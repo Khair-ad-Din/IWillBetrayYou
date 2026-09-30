@@ -48,6 +48,7 @@ export type Intent =
   | SpyIntent
   | SpyBuyIntent
   | SpyOrderIntent
+  | SpyAutoIntent
   | QuickChatIntent
   | MoveWarshipIntent
   | MarkDisconnectedIntent
@@ -76,6 +77,7 @@ export type EmbargoIntent = z.infer<typeof EmbargoIntentSchema>;
 export type SpyIntent = z.infer<typeof SpyIntentSchema>;
 export type SpyBuyIntent = z.infer<typeof SpyBuyIntentSchema>;
 export type SpyOrderIntent = z.infer<typeof SpyOrderIntentSchema>;
+export type SpyAutoIntent = z.infer<typeof SpyAutoIntentSchema>;
 export type BuildUnitIntent = z.infer<typeof BuildUnitIntentSchema>;
 export type UpgradeStructureIntent = z.infer<
   typeof UpgradeStructureIntentSchema
@@ -751,6 +753,11 @@ export const SpyOrderIntentSchema = z.object({
   spyID: zb.uint(),
   tile: zb.uint(),
 });
+export const SpyAutoIntentSchema = z.object({
+  type: z.literal("spy_auto"),
+  spyID: zb.uint(),
+  auto: z.boolean(),
+});
 
 export const EmbargoAllIntentSchema = z.object({
   type: z.literal("embargo_all"),
@@ -875,6 +882,7 @@ export const IntentSchema = z.discriminatedUnion("type", [
   SpyIntentSchema,
   SpyBuyIntentSchema,
   SpyOrderIntentSchema,
+  SpyAutoIntentSchema,
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)

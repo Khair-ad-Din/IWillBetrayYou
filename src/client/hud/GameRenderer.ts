@@ -44,6 +44,7 @@ import { ReplayPanel } from "./layers/ReplayPanel";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { SpyMarkers } from "./layers/SpyMarkers";
+import { SpyPanel } from "./layers/SpyPanel";
 import { TutorialPanel } from "./layers/TutorialPanel";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { WinModal } from "./layers/WinModal";
@@ -188,6 +189,14 @@ export function createRenderer(
   spyMarkers.game = game;
   spyMarkers.transformHandler = transformHandler;
   spyMarkers.uiState = uiState;
+
+  const spyPanel = document.querySelector("spy-panel") as SpyPanel;
+  if (!(spyPanel instanceof SpyPanel)) {
+    console.error("spy panel not found");
+  }
+  spyPanel.game = game;
+  spyPanel.eventBus = eventBus;
+  spyPanel.uiState = uiState;
 
   const replayPanel = document.querySelector("replay-panel") as ReplayPanel;
   if (!(replayPanel instanceof ReplayPanel)) {
@@ -377,6 +386,7 @@ export function createRenderer(
     replayPanel,
     goldIncomePanel,
     spyMarkers,
+    spyPanel,
     settingsModal,
     playerPanel,
     headsUpMessage,

@@ -253,16 +253,46 @@ describe("spies", () => {
     ]);
   });
 
-  test("its owner sees the province it stands in", () => {
+  test("give no vision by standing somewhere: only what they finish", () => {
     const spy = buySpy();
+    const target = bobProvinces[0];
     command(alice, {
       kind: "order",
       spyID: spy.id,
-      tile: game.provinces().tilesOf(bobProvinces[0])[0] as TileRef,
+      tile: game.provinces().tilesOf(target)[0] as TileRef,
     });
     runUntil(() => spy.investigating);
     run(FOG_SETTINGS.updateIntervalTicks + 1);
-    expect(vis(alice, bobProvinces[0])).toBe(Visible);
+    expect(vis(alice, target)).toBe(Unknown);
+    // Revealed the very tick the investigation ends, not an update later.
+    runUntil(() => !spy.investigating);
+    expect(vis(alice, target)).toBe(Visible);
+  });
+
+  test("on automatic, keep exploring the closest unknown provinces", () => {
+    const spy = buySpy();
+    command(alice, { kind: "auto", spyID: spy.id, auto: true });
+    expect(spy.auto).toBe(true);
+    runUntil(() => spy.mission === "province");
+    // Next to what Alice knows, and not something she sees live.
+    const first = spy.goal;
+    expect(vis(alice, first)).not.toBe(Visible);
+    runUntil(() => game.fogOfWar()!.revealedBy(alice).size >= 2, 20_000);
+    expect(game.fogOfWar()!.revealedBy(alice).has(first)).toBe(true);
+
+    // A manual order turns automatic off.
+    command(alice, { kind: "order", spyID: spy.id, tile: homeTile() });
+    expect(spy.auto).toBe(false);
+    expect(spy.mission).toBe("none");
+  });
+
+  test("automatic can be turned off from the panel", () => {
+    const spy = buySpy();
+    command(alice, { kind: "auto", spyID: spy.id, auto: true });
+    runUntil(() => spy.mission === "province");
+    command(alice, { kind: "auto", spyID: spy.id, auto: false });
+    expect(spy.auto).toBe(false);
+    expect(spy.mission).toBe("none");
   });
 
   test("are sent to the clients while alive, and cleared when gone", () => {
@@ -277,6 +307,8 @@ describe("spies", () => {
       moving: false,
       mission: "none",
       progress: null,
+      province: 0,
+      auto: false,
     });
     command(alice, {
       kind: "order",

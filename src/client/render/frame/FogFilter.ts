@@ -28,6 +28,12 @@ export interface FogViewer {
   isFriendly(smallID: number): boolean;
   /** Troops the player estimates `smallID` has (FogIntel.shownMaxTroops). */
   estimateTroops(smallID: number): number;
+  /**
+   * Provinces the player's spies are investigating right now, with the
+   * percent done: their land shows at once and their buildings appear one
+   * by one as the investigation goes on.
+   */
+  investigating: ReadonlyMap<number, number>;
   /** smallID of a player by their id (name labels are keyed by id). */
   smallIDOf(playerID: string): number | undefined;
 }
@@ -37,6 +43,18 @@ const NUKES = new Set<string>([
   UT_HYDROGEN_BOMB,
   UT_MIRV,
   UT_MIRV_WARHEAD,
+]);
+
+/** Structure types (a spy's investigation turns them up one by one). */
+const STRUCTURES = new Set<string>([
+  "City",
+  "Port",
+  "Factory",
+  "Defense Post",
+  "SAM Launcher",
+  "Missile Silo",
+  "Farm",
+  "Mine",
 ]);
 
 /** Side of the square cells that decide what is seen at sea. */
@@ -78,6 +96,10 @@ export class FogFilter implements FogPerception {
   private unitLevels = new Map<number, Map<string, number>>();
   /** Extra troop-cap tiles from the farms the player knows, per owner. */
   private farmBonus = new Map<number, number>();
+  /** Provinces being investigated by the player's spies, and progress. */
+  private peek = new Map<number, number>();
+  /** Bumped when the fog overlay (clouds, veil) must be redrawn. */
+  private overlayVersion = 0;
   private active = false;
   private pendingFull = false;
   private viewerID = 0;
@@ -198,7 +220,10 @@ export class FogFilter implements FogPerception {
         if (p === 0) {
           this.display[t] = real[t];
           changedTiles.push(t);
-        } else if (shown[p] === ProvinceVisibility.Visible) {
+        } else if (
+          shown[p] === ProvinceVisibility.Visible ||
+          this.peek.has(p)
+        ) {
           const before = this.display[t] & OWNER_MASK;
           const after = real[t] & OWNER_MASK;
           if (before !== after) {
@@ -210,6 +235,11 @@ export class FogFilter implements FogPerception {
         }
       }
     }
+
+    if (this.updatePeek(viewer, real, fog, changedTiles)) {
+      structuresDirty = true;
+    }
+    if (this.peek.size > 0) structuresDirty = true;
 
     this.visionUnits = [];
     for (const u of frame.units.values()) {
@@ -226,11 +256,35 @@ export class FogFilter implements FogPerception {
 
     const me = viewer.smallID;
     const units = new Map<number, UnitState>();
+    const peekedStructures = new Map<number, UnitState[]>();
     for (const [id, u] of frame.units) {
-      if (this.unitVisible(u, real, viewer)) units.set(id, u);
+      if (this.unitVisible(u, real, viewer)) {
+        units.set(id, u);
+        continue;
+      }
+      const p = this.ids[u.pos];
+      if (u.isActive && STRUCTURES.has(u.unitType) && this.peek.has(p)) {
+        let list = peekedStructures.get(p);
+        if (list === undefined) {
+          list = [];
+          peekedStructures.set(p, list);
+        }
+        list.push(u);
+      }
+    }
+    // A spy's investigation turns up the province's buildings one by one.
+    for (const [p, list] of peekedStructures) {
+      list.sort((a, b) => a.id - b.id);
+      const progress = this.peek.get(p) ?? 0;
+      const shownCount = Math.min(
+        list.length,
+        Math.floor(((list.length + 1) * progress) / 100),
+      );
+      for (let i = 0; i < shownCount; i++) units.set(list[i].id, list[i]);
     }
     let ghostID = -1;
     for (const p of fog.remembered(me)) {
+      if (this.peek.has(p)) continue;
       const memory = fog.memory(me, p);
       if (memory === null) continue;
       for (const s of memory.structures) {
@@ -275,7 +329,9 @@ export class FogFilter implements FogPerception {
         smallID === undefined ||
         !fog.knows(me, smallID) ||
         !this.inBounds(x, y) ||
-        this.shown[this.ids[y * this.mapW + x]] === ProvinceVisibility.Unknown
+        (this.shown[this.ids[y * this.mapW + x]] ===
+          ProvinceVisibility.Unknown &&
+          !this.peek.has(this.ids[y * this.mapW + x]))
       ) {
         names.delete(key);
       }
@@ -383,21 +439,72 @@ export class FogFilter implements FogPerception {
     };
   }
 
-  /** Provinces shown as `visibility` (for the fog and the grey veil). */
+  /**
+   * Provinces shown as `visibility` (for the fog and the grey veil); those
+   * a spy is investigating are left clear.
+   */
   provincesShown(visibility: ProvinceVisibility): number[] {
     const out: number[] = [];
     if (!this.active) return out;
     for (let p = 1; p <= this.count; p++) {
-      if (this.shown[p] === visibility) out.push(p);
+      if (this.shown[p] === visibility && !this.peek.has(p)) out.push(p);
     }
     return out;
+  }
+
+  /** Changes whenever provincesShown() may have changed. */
+  fogOverlayVersion(): number {
+    return this.overlayVersion;
+  }
+
+  /**
+   * Syncs the provinces the player's spies are investigating; their land is
+   * shown live while it lasts. Returns whether the set changed.
+   */
+  private updatePeek(
+    viewer: FogViewer,
+    real: Uint16Array,
+    fog: ClientFog,
+    changed: number[] | null,
+  ): boolean {
+    const next = new Map<number, number>();
+    for (const [p, progress] of viewer.investigating) {
+      if (
+        p > 0 &&
+        p <= this.count &&
+        this.shown[p] !== ProvinceVisibility.Visible
+      ) {
+        next.set(p, progress);
+      }
+    }
+    const touched = new Set<number>();
+    for (const p of next.keys()) if (!this.peek.has(p)) touched.add(p);
+    for (const p of this.peek.keys()) if (!next.has(p)) touched.add(p);
+    if (touched.size === 0) {
+      this.peek = next;
+      return false;
+    }
+    for (const p of touched) {
+      this.account(p, -1);
+      if (next.has(p)) this.peek.set(p, next.get(p)!);
+      else this.peek.delete(p);
+      this.applyProvince(p, real, fog, changed);
+      this.account(p, 1);
+    }
+    this.peek = next;
+    this.overlayVersion++;
+    return true;
   }
 
   /** Whether a tile is shown at all (not Unknown), for map markers. */
   tileKnown(tile: number): boolean {
     if (!this.active) return true;
     const p = this.ids[tile];
-    return p === 0 || this.shown[p] !== ProvinceVisibility.Unknown;
+    return (
+      p === 0 ||
+      this.shown[p] !== ProvinceVisibility.Unknown ||
+      this.peek.has(p)
+    );
   }
 
   private rebuild(real: Uint16Array, fog: ClientFog, restart: boolean): void {
@@ -441,7 +548,7 @@ export class FogFilter implements FogPerception {
     const tiles = this.tilesOf;
     const display = this.display;
 
-    if (vis === ProvinceVisibility.Visible) {
+    if (vis === ProvinceVisibility.Visible || this.peek.has(p)) {
       for (let i = start; i < end; i++) display[tiles[i]] = real[tiles[i]];
       this.frozen[p] = 1;
     } else if (vis === ProvinceVisibility.Remembered && this.frozen[p]) {

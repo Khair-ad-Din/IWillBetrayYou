@@ -165,6 +165,14 @@ export class SendSpyBuyIntentEvent implements GameEvent {
   constructor(public readonly tile: TileRef) {}
 }
 
+/** Fog of war: turn spy `spyID`'s automatic exploring on or off. */
+export class SendSpyAutoIntentEvent implements GameEvent {
+  constructor(
+    public readonly spyID: number,
+    public readonly auto: boolean,
+  ) {}
+}
+
 /** Fog of war: order spy `spyID` at `tile`. */
 export class SendSpyOrderIntentEvent implements GameEvent {
   constructor(
@@ -346,6 +354,9 @@ export class Transport {
     );
     this.subscribe(SendSpyBuyIntentEvent, (e) =>
       this.sendIntent({ type: "spy_buy", tile: e.tile }),
+    );
+    this.subscribe(SendSpyAutoIntentEvent, (e) =>
+      this.sendIntent({ type: "spy_auto", spyID: e.spyID, auto: e.auto }),
     );
     this.subscribe(SendSpyOrderIntentEvent, (e) =>
       this.sendIntent({ type: "spy_order", spyID: e.spyID, tile: e.tile }),

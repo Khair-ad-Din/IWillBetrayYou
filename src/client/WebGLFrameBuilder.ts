@@ -356,6 +356,12 @@ export class WebGLFrameBuilder {
         }
         return f;
       },
+      investigating: new Map(
+        gameView
+          .mySpies()
+          .filter((s) => s.province > 0 && s.progress !== null)
+          .map((s) => [s.province, s.progress!]),
+      ),
       estimateTroops: (id) => {
         const player = gameView.playerBySmallID(id);
         return player.isPlayer() ? shownMaxTroops(gameView, player) : 0;
@@ -368,8 +374,10 @@ export class WebGLFrameBuilder {
     const filtered = this.fogFilter.filter(frame, fog, viewer);
 
     const active = this.fogFilter.isActive();
-    if (fog.version() !== this.fogVersion || active !== this.fogWasActive) {
-      this.fogVersion = fog.version();
+    const version =
+      fog.version() * 1_000_003 + this.fogFilter.fogOverlayVersion();
+    if (version !== this.fogVersion || active !== this.fogWasActive) {
+      this.fogVersion = version;
       this.fogWasActive = active;
       this.view.setFogProvinces(
         this.fogFilter.provincesShown(ProvinceVisibility.Remembered),

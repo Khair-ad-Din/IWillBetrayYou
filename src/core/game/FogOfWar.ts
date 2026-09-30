@@ -71,8 +71,7 @@ const VISION_UNITS = [UnitType.Warship, UnitType.Port, UnitType.SAMLauncher];
  *
  * - every province they hold tiles in, and the provinces next to those;
  * - what their warships, ports and SAMs see (FOG_SETTINGS ranges);
- * - provinces revealed to them for good by their spies, and the province
- *   each of their spies is in;
+ * - provinces revealed to them for good by their spies;
  * - everything their allies and teammates see that way.
  *
  * A province that stops being visible is remembered as it was last seen
@@ -295,7 +294,6 @@ export class FogOfWar {
     }
     const revealed = this.viewers.get(player.smallID())?.revealed;
     if (revealed !== undefined) for (const p of revealed) seen[p] = 1;
-    for (const p of this.spyNetwork.seenBy(player.smallID())) seen[p] = 1;
 
     for (const unit of player.units(VISION_UNITS)) {
       let range: number;

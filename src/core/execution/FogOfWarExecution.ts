@@ -42,8 +42,10 @@ export class FogOfWarExecution implements Execution {
 
   tick(ticks: number): void {
     const fog = this.fog!;
-    fog.spies().tick();
+    // A province a spy just revealed shows at once, not up to an update later.
+    const revealed = fog.spies().tick();
     const due =
+      revealed ||
       !fog.isStarted() ||
       ticks % Math.max(1, FOG_SETTINGS.updateIntervalTicks) === 0;
     this.sendSpies();
@@ -89,6 +91,9 @@ export class FogOfWarExecution implements Execution {
         y: s.y / 100,
         moving: s.x !== s.destX || s.y !== s.destY,
         mission: s.mission,
+        target: s.target,
+        province: s.investigating ? s.goal : 0,
+        auto: s.auto,
         progress: s.investigating
           ? Math.floor(
               (100 * (SPY_SETTINGS.investigateTicks - s.ticksLeft)) /
@@ -222,6 +227,7 @@ const FogOfWarStateSchema = z.object({
         goal: zInt(),
         investigating: z.boolean(),
         ticksLeft: zInt(),
+        auto: z.boolean(),
       }),
     ),
     nextID: zInt(),
@@ -231,12 +237,20 @@ type FogOfWarState = z.infer<typeof FogOfWarStateSchema>;
 
 export const FogOfWarExecutionSnapshot = execSnapshotType({
   name: "FogOfWar",
-  version: 3,
+  version: 4,
   migrations: {
     // v2 adds spies; games saved before had none.
     1: (d) => ({ ...d, spies: { spies: [], sent: [], nextID: 1 } }),
     // v3 spies are map units; v2 spies (province hoppers) are dropped.
     2: (d) => ({ ...d, spies: { spies: [], nextID: d.spies.nextID } }),
+    // v4 adds automatic exploring (off for older spies).
+    3: (d) => ({
+      ...d,
+      spies: {
+        ...d.spies,
+        spies: d.spies.spies.map((s: object) => ({ ...s, auto: false })),
+      },
+    }),
   },
   schema: FogOfWarStateSchema,
   cls: () => FogOfWarExecution,

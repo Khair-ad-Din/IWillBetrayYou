@@ -1901,6 +1901,21 @@
     "map_label": "Spy",
     "marker_title": "Your spy: click to select it, then click where to send it"
   },
+  "spy_panel": {
+    "auto": "Auto",
+    "auto_hint": "Automatic: it explores on its own, the closest provinces you cannot see first. Any order you give it turns this off",
+    "auto_searching": "Automatic: looking for somewhere to explore",
+    "center": "Center",
+    "exploring": "Investigating a province ({progress}%)",
+    "moving": "Moving",
+    "name": "Spy {n}",
+    "select_hint": "Click to select this spy, then click on the map where to send it",
+    "spying_investigating": "Spying on {name}: investigating ({progress}%)",
+    "spying_travelling": "Spying on {name}: on the way",
+    "title": "Spies",
+    "to_province": "On the way to a province",
+    "waiting": "Waiting for orders"
+  },
   "steam_grant": {
     "ended_body": "The month of {tier} that came with your Steam purchase has ended. Nothing has been charged and nothing will be. You keep the full game: every map and mode, online play, ranked with the free daily limit, and custom lobbies with friends. The Steam app stays ad-free. If you want the {tier} perks back, you can subscribe from the store at any time.",
     "ended_heading": "Your included Steam month has ended",

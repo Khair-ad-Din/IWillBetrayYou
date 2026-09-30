@@ -29,6 +29,7 @@ const viewer: FogViewer = {
   smallID: ME,
   isFriendly: (id) => id === ME,
   estimateTroops: () => 1234,
+  investigating: new Map(),
   smallIDOf: (playerID) => ({ me: ME, enemy: ENEMY })[playerID],
 };
 
@@ -372,5 +373,36 @@ describe("FogFilter", () => {
       viewer,
     );
     expect(filter.intel(ENEMY)).toMatchObject({ tiles: 8, bonusTiles: 8 });
+  });
+
+  test("a spy's investigation shows the land at once, then buildings one by one", () => {
+    fog.apply(update(true, [{ viewer: ME, province: 1, visibility: Visible }]));
+    const cities = [
+      unit(21, ENEMY, RIGHT, { unitType: "City" }),
+      unit(22, ENEMY, RIGHT + W, { unitType: "City" }),
+      unit(23, ENEMY, RIGHT + 1, { unitType: "Port" }),
+    ];
+    const spyAt = (progress: number) => ({
+      ...viewer,
+      investigating: new Map([[2, progress]]),
+    });
+    const shownIDs = (out: FrameData) =>
+      [...out.units.keys()].filter((id) => id > 20).sort();
+
+    let out = filter.filter(frame(realTiles(), [], cities), fog, spyAt(0));
+    // The land shows as it really is, without fog, straight away.
+    expect(out.tileState[RIGHT]).toBe(ENEMY);
+    expect(filter.provincesShown(Unknown)).not.toContain(2);
+    expect(shownIDs(out)).toEqual([]);
+
+    out = filter.filter(frame(realTiles(), [], cities), fog, spyAt(50));
+    expect(shownIDs(out)).toEqual([21, 22]);
+    out = filter.filter(frame(realTiles(), [], cities), fog, spyAt(99));
+    expect(shownIDs(out)).toEqual([21, 22, 23]);
+
+    // The spy leaves without finishing: back to fog.
+    out = filter.filter(frame(realTiles(), [], cities), fog, viewer);
+    expect(out.tileState[RIGHT]).toBe(0);
+    expect(filter.provincesShown(Unknown)).toContain(2);
   });
 });

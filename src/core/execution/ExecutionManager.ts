@@ -124,6 +124,12 @@ export class Executor {
           spyID: intent.spyID,
           tile: intent.tile,
         });
+      case "spy_auto":
+        return new SpyExecution(player, {
+          kind: "auto",
+          spyID: intent.spyID,
+          auto: intent.auto,
+        });
       case "build_unit":
         return new ConstructionExecution(
           player,
