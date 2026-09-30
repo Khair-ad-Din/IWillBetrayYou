@@ -210,6 +210,7 @@ function queuedIntent(game: Game, p: Player, tick: number): Intent | null {
     { type: "donate_troops", recipient: other.id(), troops: 1 },
     { type: "embargo", targetID: other.id(), action: "start" },
     { type: "embargo_all", action: "stop" },
+    { type: "spy", targetID: other.id() },
     {
       type: "build_unit",
       unit: UnitType.City,
@@ -278,7 +279,7 @@ function playIntent(game: Game, p: Player, rand: PseudoRandom): Intent | null {
   const other = pick(rand, others);
   const own = (types: UnitType[]) => p.units(types);
 
-  switch (rand.nextInt(0, 22)) {
+  switch (rand.nextInt(0, 23)) {
     case 0:
     case 1:
     case 2: {
@@ -418,6 +419,10 @@ function playIntent(game: Game, p: Player, rand: PseudoRandom): Intent | null {
         type: "mark_disconnected",
         isDisconnected: !p.isDisconnected() && rand.chance(3),
       };
+    case 22:
+      // Only does anything with fog of war on (the FFA variant).
+      if (other === null || !rand.chance(4)) return null;
+      return { type: "spy", targetID: other.id() };
   }
   return null;
 }

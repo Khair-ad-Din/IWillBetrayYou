@@ -790,6 +790,9 @@
     "sent_emoji": "Sent {name}: {emoji}",
     "sent_gold_to_player": "Sent {gold} gold to {name}",
     "sent_troops_to_player": "Sent {troops} troops to {name}",
+    "spy_caught_owner": "Your spy in {name} has been caught",
+    "spy_caught_victim": "{name} was spying on you: their spy has been caught",
+    "spy_finished": "Your spy in {name} has finished and come home",
     "trade_ship_captured": "Your trade ship was captured by {name}",
     "unit_destroyed": "Your {unit} was destroyed",
     "unit_voluntarily_deleted": "Unit voluntarily deleted",
@@ -1652,7 +1655,12 @@
     "reported": "Reported",
     "send_alliance": "Send Alliance",
     "send_gold": "Send Gold",
+    "send_spy": "Spy ({cost})",
+    "send_spy_title": "Send a spy: it reveals their provinces one by one, for the rest of the game",
     "send_troops": "Send Troops",
+    "spy_max": "You already have as many spies out as you can",
+    "spy_no_gold": "Not enough gold for a spy",
+    "spy_unavailable": "Spies can only be sent in fog of war games, at other players",
     "start_trade": "Start Trading",
     "start_trade_all": "Start Trading with All",
     "stop_trade": "Stop Trading",
@@ -1885,6 +1893,9 @@
   },
   "spawn_timer": {
     "team_percent_tooltip": "{team}: {percent}"
+  },
+  "spy": {
+    "map_label": "Spy"
   },
   "steam_grant": {
     "ended_body": "The month of {tier} that came with your Steam purchase has ended. Nothing has been charged and nothing will be. You keep the full game: every map and mode, online play, ranked with the free daily limit, and custom lobbies with friends. The Steam app stays ad-free. If you want the {tier} perks back, you can subscribe from the store at any time.",

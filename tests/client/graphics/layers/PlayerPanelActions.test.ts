@@ -46,6 +46,7 @@ import {
   PlayerType,
 } from "../../../../src/core/game/Game";
 import { flattenedEmojiTable } from "../../../../src/core/Util";
+import { NO_FOG } from "../../../util/viewStubs";
 
 const mockActionButton = actionButton as unknown as ReturnType<typeof vi.fn>;
 
@@ -78,6 +79,7 @@ function makeGame() {
       isReplay: () => false,
     }),
     gameOver: () => false,
+    ...NO_FOG,
   };
 }
 

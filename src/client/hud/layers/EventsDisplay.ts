@@ -50,6 +50,7 @@ const TIER_1_TYPES: ReadonlySet<MessageType> = new Set([
   MessageType.MIRV_INBOUND,
   MessageType.NUKE_DETONATED,
   MessageType.NAVAL_INVASION_INBOUND,
+  MessageType.SPY_CAUGHT,
   MessageType.ATTACK_REQUEST,
   MessageType.ALLIANCE_ACCEPTED,
   MessageType.ALLIANCE_REJECTED,

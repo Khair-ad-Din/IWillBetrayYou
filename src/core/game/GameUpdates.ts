@@ -110,6 +110,7 @@ export enum GameUpdateType {
   DonateEvent,
   ResourceSites,
   FogOfWar,
+  Spies,
 }
 
 export type GameUpdate =
@@ -137,9 +138,29 @@ export type GameUpdate =
   | GamePausedUpdate
   | DonateEventUpdate
   | ResourceSitesUpdate
-  | FogOfWarUpdate;
+  | FogOfWarUpdate
+  | SpiesUpdate;
 
 export type ResourceSiteState = "unclaimed" | "claimed" | "destroyed";
+
+/** One spy as the clients draw it (only its owner is shown it). */
+export interface SpyView {
+  id: number;
+  owner: number;
+  target: number;
+  /** A tile near the middle of the province it is in. */
+  tile: TileRef;
+  phase: "travel" | "investigate";
+  /** Percent of the current hop or investigation done. */
+  progress: number;
+}
+
+/** Every spy out, and how many each player has sent (for the price). */
+export interface SpiesUpdate {
+  type: GameUpdateType.Spies;
+  spies: SpyView[];
+  sent: [number, number][];
+}
 
 /**
  * Fog of war changes for every human player (clients keep their own). With

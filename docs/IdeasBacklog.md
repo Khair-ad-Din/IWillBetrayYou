@@ -54,7 +54,7 @@ bonificación, cómo se muestran en el mapa y si la IA los tiene en cuenta.
 Una provincia que no se ataca durante un rato gana defensa poco a poco. Los
 frentes estables significan algo y atacar por sorpresa compensa.
 
-## 3. Niebla de guerra (L) — diseño decidido, sin empezar
+## 3. Niebla de guerra (L) — hecho (rama fog-of-war)
 
 Opción de partida "Niebla de guerra" (sí/no), como las demás de la sala. Sin
 niebla todo funciona como ahora; los espías solo existen con niebla. Es solo
@@ -69,20 +69,26 @@ Cada provincia está, para cada jugador, en uno de tres estados:
 - **Recuerdo**: la viste y dejaste de verla (perdiste la frontera, un aliado
   te traicionó). Se queda congelada como la viste, con velo gris: dueño y
   edificios.
-- **Desconocida**: aparece como al empezar la partida, sin dueño.
+- **Desconocida**: sin dueño aparente y cubierta por una niebla de nubes que
+  se mueve despacio (lo recordado lleva un velo gris rayado).
 
-Aliarse comparte visión; traicionar la corta de golpe.
+Aliarse comparte visión; traicionar la corta de golpe. Las provincias
+separadas por un río o un estrecho de hasta 10 casillas de agua cuentan como
+vecinas (FOG_SETTINGS.neighborWaterGap).
 
 Reglas:
 
 - **Conocer un país**: en cuanto ves una casilla suya. Los países
   desconocidos no salen en listas y no puedes aliarte con ellos ni espiarlos.
 - **Clasificación**: solo lo que sabes; lo demás "??".
-- **Ficha y tropas bajo el nombre**: el máximo de tropas se estima con lo
-  conocido (casillas, granjas y ciudades vistas). Las tropas actuales solo se
-  ven en vivo si alguna de sus provincias es visible; si no, el último dato
-  con su antigüedad ("hace 1:20").
-- **Registro de eventos**: solo sobre países que conoces.
+- **Tropas de otros**: nunca la cifra real, solo una estimación "~X": el
+  máximo de tropas que daría la tierra que conoces de ellos (sus casillas,
+  las granjas y ciudades conocidas). Las tropas de sus ataques y barcos salen
+  como "??". El oro, siempre "??".
+- **Registro de eventos**: ya solo trae mensajes en los que participas. Los
+  avisos de ataque dicen quién ataca (se revisará el registro entero más
+  adelante).
+- **Brillo de jugadores pequeños**: desactivado con niebla.
 - **Clic en terreno desconocido**: el menú actúa como si fuera tierra de
   nadie. Se puede atacar a ciegas; la verdad se descubre al llegar.
 - **Nukes**: se ven cuando pasan por tu visión. Si van a por ti, siempre.
@@ -94,24 +100,25 @@ Reglas:
 El recuerdo se guarda en la simulación, no solo en pantalla, para que no se
 pierda al recargar (Ctrl+F5).
 
-## 4. Espías (M) — diseño decidido, sin empezar
+## 4. Espías (M) — hecho (rama fog-of-war)
 
-Espía autónomo: eliges un país que conoces, lo mandas y él solo va de
-provincia en provincia (no casilla a casilla), cruzando el mar si hace falta.
-Empieza por las provincias de ese país más cercanas a lo que ya conoces y
-avanza como un frente. Las provincias que atraviesa de camino también se
-revelan.
+Espía autónomo: eliges un país que conoces (botón "Espía" en su panel), lo
+mandas y él solo va de provincia en provincia (no casilla a casilla),
+cruzando el mar si hace falta. Empieza por las provincias de ese país más
+cercanas a lo que ya conoces y avanza como un frente. Las provincias que
+atraviesa de camino se ven mientras está en ellas (luego quedan en recuerdo).
+En el mapa sale una etiqueta "Espía 45%" donde está.
 
 - Cada provincia que termina queda **visible en vivo para el resto de la
-  partida** (territorio, edificios, ataques, lo que pase en ella), y manda un
-  parte de las tropas actuales del país.
+  partida** (territorio, edificios, ataques, lo que pase en ella). Sin parte
+  de tropas: las tropas de otros solo se estiman.
 - Al acabar el país desaparece y libera su hueco. Si el país conquista
   provincias nuevas, hará falta otro espía para verlas.
 - Detección por provincia investigada: si lo pillan muere (lo descubierto se
   conserva) y la víctima recibe "X te está espiando".
-- Valores de partida, a ajustar jugando: 15 s por provincia, 100k de oro el
-  primero y cada uno más caro, máximo 3 a la vez, 2 % de detección, sin
-  edificio necesario.
+- Valores de partida, a ajustar jugando (SPY_SETTINGS): 15 s por provincia,
+  2 s por provincia de camino, 100k de oro el primero y 50k más cada uno que
+  mandes, máximo 3 a la vez, 2 % de detección, sin edificio necesario.
 - La IA no usa espías por ahora.
 
 Para más adelante: sabotaje (parar una mina, robar oro), contraespionaje,
@@ -123,9 +130,12 @@ cada puerto o estación extranjera por la que pasan).
 Avisos como "te atacan en [provincia]", con un clic para ir allí. Queda mucho
 mejor con nombres de provincia.
 
-Decidido: un sistema mínimo entra junto con los espías (espía capturado, "X
-te está espiando", nuke detectada, "te atacan"), sin nombres de provincia:
-"te atacan en el noroeste" y clic para ir allí.
+Hecho con los espías, en el registro de eventos: "X te estaba espiando: su
+espía ha sido capturado", "Tu espía en X ha sido capturado" y "Tu espía en X
+ha terminado". Los avisos de nukes ya existían.
+
+Pendiente, para cuando se revise el registro de eventos entero: "te atacan en
+el noroeste" con clic para ir allí.
 
 ## 6. Tropas permanentes en un frente (propuesta propia; sustituiría a la 2)
 

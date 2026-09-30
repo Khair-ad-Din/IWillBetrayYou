@@ -3,6 +3,7 @@ import { Game, Player, PlayerType, Structures, UnitType } from "./Game";
 import { TileRef } from "./GameMap";
 import { NO_PROVINCE } from "./Provinces";
 import { ProvinceState } from "./ProvinceState";
+import { SpyNetwork } from "./Spies";
 
 /** How much a player knows about a province under fog of war. */
 export enum ProvinceVisibility {
@@ -70,7 +71,8 @@ const VISION_UNITS = [UnitType.Warship, UnitType.Port, UnitType.SAMLauncher];
  *
  * - every province they hold tiles in, and the provinces next to those;
  * - what their warships, ports and SAMs see (FOG_SETTINGS ranges);
- * - provinces revealed to them for good (spies);
+ * - provinces revealed to them for good by their spies, and the province
+ *   each of their spies is in;
  * - everything their allies and teammates see that way.
  *
  * A province that stops being visible is remembered as it was last seen
@@ -85,11 +87,23 @@ export class FogOfWar {
   private readonly provinces: ProvinceState;
   private readonly adjacency: number[][];
   private readonly viewers = new Map<number, ViewerState>();
+  private readonly spyNetwork: SpyNetwork;
   private started = false;
 
   constructor(private readonly game: Game) {
     this.provinces = game.provinces();
     this.adjacency = provinceAdjacency(game);
+    this.spyNetwork = new SpyNetwork(game, this, this.adjacency);
+  }
+
+  /** The players' spies (they reveal provinces to their owners). */
+  spies(): SpyNetwork {
+    return this.spyNetwork;
+  }
+
+  /** Provinces revealed to `viewer` for the rest of the game. */
+  revealedBy(viewer: Player | number): ReadonlySet<number> {
+    return this.viewers.get(smallIDOf(viewer))?.revealed ?? new Set();
   }
 
   /** False until the first update: everything counts as visible before. */
@@ -281,6 +295,7 @@ export class FogOfWar {
     }
     const revealed = this.viewers.get(player.smallID())?.revealed;
     if (revealed !== undefined) for (const p of revealed) seen[p] = 1;
+    for (const p of this.spyNetwork.seenBy(player.smallID())) seen[p] = 1;
 
     for (const unit of player.units(VISION_UNITS)) {
       let range: number;

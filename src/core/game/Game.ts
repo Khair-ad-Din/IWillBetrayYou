@@ -1118,6 +1118,9 @@ export enum MessageType {
   DONATION_RECEIVED,
   CHAT,
   RENEW_ALLIANCE,
+  // Fog of war spies: one caught (both sides), or one coming home.
+  SPY_CAUGHT,
+  SPY_REPORT,
 }
 
 // Message categories used for filtering events in the EventsDisplay
@@ -1153,6 +1156,8 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.DONATION_SENT]: MessageCategory.TRADE,
   [MessageType.DONATION_RECEIVED]: MessageCategory.TRADE,
   [MessageType.CHAT]: MessageCategory.CHAT,
+  [MessageType.SPY_CAUGHT]: MessageCategory.ATTACK,
+  [MessageType.SPY_REPORT]: MessageCategory.ATTACK,
 } as const;
 
 /**

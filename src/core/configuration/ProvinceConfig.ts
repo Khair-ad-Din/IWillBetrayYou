@@ -91,6 +91,27 @@ export const FOG_SETTINGS = {
 };
 
 /**
+ * Spies (fog of war only): sent at a known player, a spy works through their
+ * provinces on its own, closest to what its owner already knows first. Each
+ * province it finishes stays visible to its owner for the rest of the game.
+ */
+export const SPY_SETTINGS = {
+  /** Gold for a player's first spy; each one sent after costs costStep more. */
+  baseCost: 100_000,
+  costStep: 50_000,
+  /** Spies a player can have out at once. */
+  maxActive: 3,
+  /** Ticks to investigate one province (10 ticks = 1 s). */
+  investigateTicks: 15 * 10,
+  /** Ticks to cross one province on the way to the next target. */
+  travelTicksPerProvince: 2 * 10,
+  /** Ticks per tile of distance when it has to cross the sea. */
+  seaTicksPerTile: 0.5,
+  /** Chance, per thousand, of being caught at the end of each province. */
+  detectionPerMille: 20,
+};
+
+/**
  * Gold per tick a mine of `level` pays (simulation and HUD share it). Each
  * level raises the pay by one more growth step than the last one did:
  * start + step * (1 + 2 + ... + (level - 1)).

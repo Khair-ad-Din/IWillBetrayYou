@@ -155,6 +155,11 @@ export class SendEmbargoIntentEvent implements GameEvent {
   ) {}
 }
 
+/** Fog of war: send a spy at `target`. */
+export class SendSpyIntentEvent implements GameEvent {
+  constructor(public readonly target: PlayerView) {}
+}
+
 export class SendEmbargoAllIntentEvent implements GameEvent {
   constructor(public readonly action: "start" | "stop") {}
 }
@@ -323,6 +328,9 @@ export class Transport {
     );
     this.subscribe(SendQuickChatEvent, (e) => this.onSendQuickChatIntent(e));
     this.subscribe(SendEmbargoIntentEvent, (e) => this.onSendEmbargoIntent(e));
+    this.subscribe(SendSpyIntentEvent, (e) =>
+      this.sendIntent({ type: "spy", targetID: e.target.id() }),
+    );
     this.subscribe(SendEmbargoAllIntentEvent, (e) =>
       this.onSendEmbargoAllIntent(e),
     );

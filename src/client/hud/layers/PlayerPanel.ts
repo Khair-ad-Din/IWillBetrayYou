@@ -29,6 +29,7 @@ import {
   SendEmbargoAllIntentEvent,
   SendEmbargoIntentEvent,
   SendEmojiIntentEvent,
+  SendSpyIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
@@ -54,6 +55,7 @@ const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
 const reportIcon = assetUrl("images/SirenIconWhite.svg");
 const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
 const stopTradingIcon = assetUrl("images/StopIconWhite.svg");
+const spyIcon = assetUrl("images/NinjaIconWhite.svg");
 const targetIcon = assetUrl("images/TargetIconWhite.svg");
 const startTradingIcon = assetUrl("images/TradingIconWhite.svg");
 const traitorIcon = assetUrl("images/TraitorIconLightRed.svg");
@@ -293,6 +295,13 @@ export class PlayerPanel extends LitElement implements Controller {
   ) {
     e.stopPropagation();
     this.eventBus.emit(new SendEmbargoIntentEvent(other, "start"));
+    this.hide();
+  }
+
+  /** Fog of war: send a spy at `other` (see SpyNetwork). */
+  private handleSpyClick(e: Event, other: PlayerView) {
+    e.stopPropagation();
+    this.eventBus.emit(new SendSpyIntentEvent(other));
     this.hide();
   }
 
@@ -626,6 +635,25 @@ export class PlayerPanel extends LitElement implements Controller {
     `;
   }
 
+  /** "Send a spy" with its price, or why not (fog of war games only). */
+  private renderSpyButton(other: PlayerView) {
+    if (!this.g.fogActive()) return "";
+    const refusal = this.g.spyRefusal(other);
+    const cost = renderNumber(this.g.nextSpyCost());
+    return actionButton({
+      onClick: (e: MouseEvent) => this.handleSpyClick(e, other),
+      icon: spyIcon,
+      iconAlt: "Spy",
+      title:
+        refusal === null
+          ? translateText("player_panel.send_spy_title")
+          : translateText(`player_panel.${refusal}`),
+      label: translateText("player_panel.send_spy", { cost }),
+      type: "normal",
+      disabled: refusal !== null,
+    });
+  }
+
   private renderResources(other: PlayerView) {
     // Under fog of war, only what the local player knows (FogIntel).
     const gold = shownGold(this.g, other);
@@ -650,7 +678,7 @@ export class PlayerPanel extends LitElement implements Controller {
                     text-white w-35 shrink-0"
         >
           <span class="mr-0.5">🛡️</span>
-          <span translate="no" class="tabular-nums w-[5ch] font-semibold">
+          <span translate="no" class="tabular-nums min-w-[5ch] font-semibold">
             ${troops.estimated ? "~" : ""}${renderTroops(troops.troops || 0)}
           </span>
           <span class="text-zinc-200 whitespace-nowrap">
@@ -915,6 +943,7 @@ export class PlayerPanel extends LitElement implements Controller {
                       label: translateText("player_panel.start_trade"),
                       type: "green",
                     })}
+                ${this.renderSpyButton(other)}
                 ${canBreakAlliance
                   ? actionButton({
                       onClick: (e: MouseEvent) =>

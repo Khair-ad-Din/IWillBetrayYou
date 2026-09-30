@@ -36,6 +36,7 @@ import { SAMMissileExecutionSnapshot } from "../execution/SAMMissileExecution";
 import { ShellExecutionSnapshot } from "../execution/ShellExecution";
 import { SpawnExecutionSnapshot } from "../execution/SpawnExecution";
 import { SpawnTimerExecutionSnapshot } from "../execution/SpawnTimerExecution";
+import { SpyExecutionSnapshot } from "../execution/SpyExecution";
 import { TargetPlayerExecutionSnapshot } from "../execution/TargetPlayerExecution";
 import { TradeShipExecutionSnapshot } from "../execution/TradeShipExecution";
 import { TrainExecutionSnapshot } from "../execution/TrainExecution";
@@ -101,4 +102,5 @@ export const EXECUTION_SNAPSHOT_TYPES = [
   WinCheckExecutionSnapshot,
   ResourceSiteExecutionSnapshot,
   FogOfWarExecutionSnapshot,
+  SpyExecutionSnapshot,
 ] as unknown as readonly ExecutionSnapshotType<unknown>[];
