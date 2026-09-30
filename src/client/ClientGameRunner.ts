@@ -68,7 +68,8 @@ import {
   SendBreakAllianceIntentEvent,
   SendHashEvent,
   SendSpawnIntentEvent,
-  SendSpyIntentEvent,
+  SendSpyBuyIntentEvent,
+  SendSpyOrderIntentEvent,
   SendUpgradeStructureIntentEvent,
   Transport,
 } from "./Transport";
@@ -1215,8 +1216,13 @@ export class ClientGameRunner {
     if (!this.isActive || this.renderer.uiState.ghostStructure !== null) {
       return;
     }
-    if (this.renderer.uiState.spyTargeting) {
-      this.sendSpyAt(event);
+    if (this.renderer.uiState.spyPlacing) {
+      this.placeSpyAt(event);
+      return;
+    }
+    const selectedSpy = this.renderer.uiState.selectedSpy;
+    if (selectedSpy !== undefined && selectedSpy !== null) {
+      this.orderSpyAt(selectedSpy, event);
       return;
     }
     const cell = this.renderer.transformHandler.screenToWorldCoordinates(
@@ -1266,24 +1272,39 @@ export class ClientGameRunner {
       });
   }
 
-  /**
-   * Fog of war, spy button on: sends a spy at the player whose land (as the
-   * player sees it) was clicked. A click on nobody's land keeps the button
-   * on; Esc or a right click turns it off.
-   */
-  private sendSpyAt(event: MouseUpEvent) {
+  /** The tile under a click, or null off the map. */
+  private tileAt(event: MouseUpEvent): TileRef | null {
     const cell = this.renderer.transformHandler.screenToWorldCoordinates(
       event.x,
       event.y,
     );
-    if (!this.gameView.isValidCoord(cell.x, cell.y)) return;
-    const owner = this.gameView.visibleOwner(this.gameView.ref(cell.x, cell.y));
-    if (!owner.isPlayer()) return;
-    const target = owner as PlayerView;
-    if (!this.gameView.knowsPlayer(target)) return;
-    if (this.gameView.spyRefusal(target) !== null) return;
-    this.eventBus.emit(new SendSpyIntentEvent(target));
-    this.renderer.uiState.spyTargeting = false;
+    if (!this.gameView.isValidCoord(cell.x, cell.y)) return null;
+    return this.gameView.ref(cell.x, cell.y);
+  }
+
+  /**
+   * Fog of war, spy button on: buys a spy on the clicked tile if it is the
+   * player's own land (anything else keeps the button on; Esc or a right
+   * click turns it off).
+   */
+  private placeSpyAt(event: MouseUpEvent) {
+    const tile = this.tileAt(event);
+    if (tile === null || this.gameView.spyBuyRefusal() !== null) return;
+    const owner = this.gameView.visibleOwner(tile);
+    if (owner !== this.gameView.myPlayer()) return;
+    this.eventBus.emit(new SendSpyBuyIntentEvent(tile));
+    this.renderer.uiState.spyPlacing = false;
+  }
+
+  /**
+   * Fog of war, a spy selected: orders it at the clicked tile (explore it,
+   * spy on its country, or move there; see SpyNetwork.order).
+   */
+  private orderSpyAt(spyID: number, event: MouseUpEvent) {
+    const tile = this.tileAt(event);
+    if (tile === null) return;
+    this.eventBus.emit(new SendSpyOrderIntentEvent(spyID, tile));
+    this.renderer.uiState.selectedSpy = null;
   }
 
   private autoUpgradeEvent(event: AutoUpgradeEvent) {

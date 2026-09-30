@@ -211,6 +211,8 @@ function queuedIntent(game: Game, p: Player, tick: number): Intent | null {
     { type: "embargo", targetID: other.id(), action: "start" },
     { type: "embargo_all", action: "stop" },
     { type: "spy", targetID: other.id() },
+    { type: "spy_buy", tile: p.spawnTile() ?? 0 },
+    { type: "spy_order", spyID: 1, tile: other.spawnTile() ?? 0 },
     {
       type: "build_unit",
       unit: UnitType.City,
@@ -419,10 +421,24 @@ function playIntent(game: Game, p: Player, rand: PseudoRandom): Intent | null {
         type: "mark_disconnected",
         isDisconnected: !p.isDisconnected() && rand.chance(3),
       };
-    case 22:
-      // Only does anything with fog of war on (the FFA variant).
-      if (other === null || !rand.chance(4)) return null;
-      return { type: "spy", targetID: other.id() };
+    case 22: {
+      // Spies only exist with fog of war on (the FFA variant): buy one on
+      // our land, or send one of ours somewhere.
+      if (other === null || !rand.chance(2)) return null;
+      const mine = (game.fogOfWar()?.spies().list() ?? []).filter(
+        (s) => s.owner === p.smallID(),
+      );
+      const spy = pick(rand, mine);
+      if (spy === null || rand.chance(3)) {
+        const tile = randomOwnedTile(rand, p);
+        return tile === null ? null : { type: "spy_buy", tile };
+      }
+      const dst = randomOwnedTile(rand, other);
+      if (dst === null) return null;
+      return rand.chance(3)
+        ? { type: "spy", targetID: other.id() }
+        : { type: "spy_order", spyID: spy.id, tile: dst };
+    }
   }
   return null;
 }

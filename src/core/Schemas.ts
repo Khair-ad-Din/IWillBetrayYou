@@ -46,6 +46,8 @@ export type Intent =
   | BuildUnitIntent
   | EmbargoIntent
   | SpyIntent
+  | SpyBuyIntent
+  | SpyOrderIntent
   | QuickChatIntent
   | MoveWarshipIntent
   | MarkDisconnectedIntent
@@ -72,6 +74,8 @@ export type DonateGoldIntent = z.infer<typeof DonateGoldIntentSchema>;
 export type DonateTroopsIntent = z.infer<typeof DonateTroopIntentSchema>;
 export type EmbargoIntent = z.infer<typeof EmbargoIntentSchema>;
 export type SpyIntent = z.infer<typeof SpyIntentSchema>;
+export type SpyBuyIntent = z.infer<typeof SpyBuyIntentSchema>;
+export type SpyOrderIntent = z.infer<typeof SpyOrderIntentSchema>;
 export type BuildUnitIntent = z.infer<typeof BuildUnitIntentSchema>;
 export type UpgradeStructureIntent = z.infer<
   typeof UpgradeStructureIntentSchema
@@ -732,10 +736,20 @@ export const EmbargoIntentSchema = z.object({
   action: z.union([z.literal("start"), z.literal("stop")]),
 });
 
-// Fog of war: send a spy at a player (see SpyNetwork).
+// Fog of war spies (see SpyNetwork): send your closest spy at a player
+// (menus), buy one on your land, or order one at a tile.
 export const SpyIntentSchema = z.object({
   type: z.literal("spy"),
   targetID: MappedID,
+});
+export const SpyBuyIntentSchema = z.object({
+  type: z.literal("spy_buy"),
+  tile: zb.uint(),
+});
+export const SpyOrderIntentSchema = z.object({
+  type: z.literal("spy_order"),
+  spyID: zb.uint(),
+  tile: zb.uint(),
 });
 
 export const EmbargoAllIntentSchema = z.object({
@@ -859,6 +873,8 @@ export const IntentSchema = z.discriminatedUnion("type", [
   UpdateGameConfigIntentSchema,
   ToggleGameStartTimerIntentSchema,
   SpyIntentSchema,
+  SpyBuyIntentSchema,
+  SpyOrderIntentSchema,
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)

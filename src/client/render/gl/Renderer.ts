@@ -1044,13 +1044,6 @@ export class GPURenderer {
     this.worldTextPass.setAttackTroopLabels(labels);
   }
 
-  /** The local player's spies on the map (fog of war). */
-  setSpyLabels(
-    labels: import("./passes/WorldTextPass").AttackTroopLabel[],
-  ): void {
-    this.worldTextPass.setSpyLabels(labels);
-  }
-
   applyBonusEvents(events: BonusEvent[]): void {
     if (events.length === 0) return;
     // In live game, filter to local player only. In replay (localPlayerID=0), show all.

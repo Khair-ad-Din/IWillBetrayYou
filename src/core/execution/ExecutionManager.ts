@@ -112,7 +112,18 @@ export class Executor {
       case "embargo_all":
         return new EmbargoAllExecution(player, intent.action);
       case "spy":
-        return new SpyExecution(player, intent.targetID);
+        return new SpyExecution(player, {
+          kind: "send",
+          targetID: intent.targetID,
+        });
+      case "spy_buy":
+        return new SpyExecution(player, { kind: "buy", tile: intent.tile });
+      case "spy_order":
+        return new SpyExecution(player, {
+          kind: "order",
+          spyID: intent.spyID,
+          tile: intent.tile,
+        });
       case "build_unit":
         return new ConstructionExecution(
           player,

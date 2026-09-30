@@ -635,11 +635,10 @@ export class PlayerPanel extends LitElement implements Controller {
     `;
   }
 
-  /** "Send a spy" with its price, or why not (fog of war games only). */
+  /** Send one's closest spy at this player, or why not (fog of war only). */
   private renderSpyButton(other: PlayerView) {
     if (!this.g.fogActive()) return "";
     const refusal = this.g.spyRefusal(other);
-    const cost = renderNumber(this.g.nextSpyCost());
     return actionButton({
       onClick: (e: MouseEvent) => this.handleSpyClick(e, other),
       icon: spyIcon,
@@ -648,7 +647,7 @@ export class PlayerPanel extends LitElement implements Controller {
         refusal === null
           ? translateText("player_panel.send_spy_title")
           : translateText(`player_panel.${refusal}`),
-      label: translateText("player_panel.send_spy", { cost }),
+      label: translateText("player_panel.send_spy"),
       type: "normal",
       disabled: refusal !== null,
     });

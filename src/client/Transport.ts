@@ -155,9 +155,22 @@ export class SendEmbargoIntentEvent implements GameEvent {
   ) {}
 }
 
-/** Fog of war: send a spy at `target`. */
+/** Fog of war: send one's closest spy to spy on `target`. */
 export class SendSpyIntentEvent implements GameEvent {
   constructor(public readonly target: PlayerView) {}
+}
+
+/** Fog of war: buy a spy on one's own `tile`. */
+export class SendSpyBuyIntentEvent implements GameEvent {
+  constructor(public readonly tile: TileRef) {}
+}
+
+/** Fog of war: order spy `spyID` at `tile`. */
+export class SendSpyOrderIntentEvent implements GameEvent {
+  constructor(
+    public readonly spyID: number,
+    public readonly tile: TileRef,
+  ) {}
 }
 
 export class SendEmbargoAllIntentEvent implements GameEvent {
@@ -330,6 +343,12 @@ export class Transport {
     this.subscribe(SendEmbargoIntentEvent, (e) => this.onSendEmbargoIntent(e));
     this.subscribe(SendSpyIntentEvent, (e) =>
       this.sendIntent({ type: "spy", targetID: e.target.id() }),
+    );
+    this.subscribe(SendSpyBuyIntentEvent, (e) =>
+      this.sendIntent({ type: "spy_buy", tile: e.tile }),
+    );
+    this.subscribe(SendSpyOrderIntentEvent, (e) =>
+      this.sendIntent({ type: "spy_order", spyID: e.spyID, tile: e.tile }),
     );
     this.subscribe(SendEmbargoAllIntentEvent, (e) =>
       this.onSendEmbargoAllIntent(e),

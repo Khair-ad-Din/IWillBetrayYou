@@ -147,19 +147,19 @@ export type ResourceSiteState = "unclaimed" | "claimed" | "destroyed";
 export interface SpyView {
   id: number;
   owner: number;
-  target: number;
-  /** A tile near the middle of the province it is in. */
-  tile: TileRef;
-  phase: "travel" | "investigate";
-  /** Percent of the current hop or investigation done. */
-  progress: number;
+  /** Position in tiles (fractional). */
+  x: number;
+  y: number;
+  moving: boolean;
+  mission: "none" | "country" | "province";
+  /** Percent of the investigation under way, or null if not investigating. */
+  progress: number | null;
 }
 
-/** Every spy out, and how many each player has sent (for the price). */
+/** Every spy alive (sent every tick while any exists). */
 export interface SpiesUpdate {
   type: GameUpdateType.Spies;
   spies: SpyView[];
-  sent: [number, number][];
 }
 
 /**

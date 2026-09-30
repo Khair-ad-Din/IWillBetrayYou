@@ -690,8 +690,12 @@ export class InputHandler {
             closedUI = true;
           }
 
-          if (this.uiState.spyTargeting) {
-            this.uiState.spyTargeting = false;
+          if (
+            this.uiState.spyPlacing ||
+            (this.uiState.selectedSpy ?? null) !== null
+          ) {
+            this.uiState.spyPlacing = false;
+            this.uiState.selectedSpy = null;
             closedUI = true;
           }
 
@@ -973,7 +977,8 @@ export class InputHandler {
         event.shiftKey ||
         this.gameView.inSpawnPhase() || // No Radial Menu during spawn phase, only spawn point selection
         this.uiState.ghostStructure !== null || // Block radial menu on left click if building
-        this.uiState.spyTargeting === true // ...or picking whom to spy on
+        this.uiState.spyPlacing === true || // ...placing a spy
+        (this.uiState.selectedSpy ?? null) !== null // ...or ordering one
       ) {
         this.eventBus.emit(new MouseUpEvent(event.x, event.y));
       } else {
@@ -1123,8 +1128,12 @@ export class InputHandler {
       this.setGhostStructure(null);
       return;
     }
-    if (this.uiState.spyTargeting) {
-      this.uiState.spyTargeting = false;
+    if (
+      this.uiState.spyPlacing ||
+      (this.uiState.selectedSpy ?? null) !== null
+    ) {
+      this.uiState.spyPlacing = false;
+      this.uiState.selectedSpy = null;
       return;
     }
     // If a warship/boat is selected, right-click cancels the selection rather
@@ -1137,7 +1146,10 @@ export class InputHandler {
   }
 
   private setGhostStructure(ghostStructure: PlayerBuildableUnitType | null) {
-    if (ghostStructure !== null) this.uiState.spyTargeting = false;
+    if (ghostStructure !== null) {
+      this.uiState.spyPlacing = false;
+      this.uiState.selectedSpy = null;
+    }
     if (
       this.uiState.ghostStructure === ghostStructure &&
       ghostStructure !== null

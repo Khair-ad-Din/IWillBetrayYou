@@ -3,7 +3,7 @@ import {
   SPY_SETTINGS,
 } from "../src/core/configuration/ProvinceConfig";
 import { FogOfWarExecution } from "../src/core/execution/FogOfWarExecution";
-import { SpyExecution } from "../src/core/execution/SpyExecution";
+import { SpyCommand, SpyExecution } from "../src/core/execution/SpyExecution";
 import { ProvinceVisibility } from "../src/core/game/FogOfWar";
 import {
   Game,
@@ -12,11 +12,13 @@ import {
   PlayerInfo,
   PlayerType,
 } from "../src/core/game/Game";
+import { TileRef } from "../src/core/game/GameMap";
 import {
   DisplayMessageUpdate,
   GameUpdateType,
   SpiesUpdate,
 } from "../src/core/game/GameUpdates";
+import { Spy } from "../src/core/game/Spies";
 import { setup } from "./util/Setup";
 import { expectSnapshotRoundTrip } from "./util/Snapshot";
 
@@ -27,10 +29,11 @@ let game: Game;
 let alice: Player;
 let bob: Player;
 let home: number;
-/** Bob's provinces (he holds all of them). */
+/** Bob's provinces two steps away from Alice (he holds all of them). */
 let bobProvinces: number[];
 let messages: DisplayMessageUpdate[];
 let spyUpdates: SpiesUpdate[];
+let savedDetection: number;
 
 function human(name: string): PlayerInfo {
   return new PlayerInfo(name, PlayerType.Human, name, name);
@@ -70,15 +73,26 @@ function spies() {
   return game.fogOfWar()!.spies();
 }
 
-function sendSpy(from: Player, to: Player): void {
-  game.addExecution(new SpyExecution(from, to.id()));
+function command(player: Player, c: SpyCommand): void {
+  game.addExecution(new SpyExecution(player, c));
   run(2);
 }
 
-/** Ticks for a spy to reach and investigate every one of Bob's provinces. */
-const PLENTY = 400 * (SPY_SETTINGS.investigateTicks + 100);
+function homeTile(): TileRef {
+  return game.provinces().tilesOf(home)[0] as TileRef;
+}
 
-let savedDetection: number;
+function buySpy(): Spy {
+  command(alice, { kind: "buy", tile: homeTile() });
+  const list = spies().list();
+  return list[list.length - 1];
+}
+
+/** Runs until `done` holds (or fails after `max` ticks). */
+function runUntil(done: () => boolean, max = 5000): void {
+  for (let i = 0; i < max && !done(); i++) run(1);
+  expect(done()).toBe(true);
+}
 
 beforeEach(async () => {
   savedDetection = SPY_SETTINGS.detectionPerMille;
@@ -89,8 +103,8 @@ beforeEach(async () => {
   messages = [];
   spyUpdates = [];
 
-  // Alice in province 1; Bob in the provinces two steps away, plus one
-  // tile next to Alice so she has seen him.
+  // Alice in province 1; Bob in provinces two steps away, plus one tile
+  // next to Alice so she has seen him.
   home = 1;
   conquerProvince(alice, home);
   const near = neighbors(home);
@@ -104,7 +118,7 @@ beforeEach(async () => {
   for (const p of bobProvinces) conquerProvince(bob, p);
   bob.conquer(game.provinces().tilesOf([...near][0])[0]);
 
-  alice.addGold(10_000_000n);
+  alice.addGold(100_000_000n);
   game.addExecution(new FogOfWarExecution());
   run(FOG_SETTINGS.updateIntervalTicks + 1);
 });
@@ -114,66 +128,95 @@ afterEach(() => {
 });
 
 describe("spies", () => {
-  test("cost gold, more for each one sent, and at most maxActive at once", () => {
-    expect(game.fogOfWar()!.knowsPlayer(alice, bob)).toBe(true);
-    const goldBefore = alice.gold();
-    expect(spies().cost(alice)).toBe(BigInt(SPY_SETTINGS.baseCost));
-    sendSpy(alice, bob);
-    expect(spies().activeCount(alice)).toBe(1);
-    expect(alice.gold()).toBe(goldBefore - BigInt(SPY_SETTINGS.baseCost));
-    expect(spies().cost(alice)).toBe(
-      BigInt(SPY_SETTINGS.baseCost + SPY_SETTINGS.costStep),
+  test("are bought on your own land, each one dearer, at most three", () => {
+    const [first, second, third] = SPY_SETTINGS.costs.map(BigInt);
+    const gold = alice.gold();
+    const spy = buySpy();
+    expect(spy.owner).toBe(alice.smallID());
+    expect(game.ref(Math.floor(spy.x / 100), Math.floor(spy.y / 100))).toBe(
+      homeTile(),
     );
+    expect(alice.gold()).toBe(gold - first);
+    buySpy();
+    expect(alice.gold()).toBe(gold - first - second);
+    buySpy();
+    expect(alice.gold()).toBe(gold - first - second - third);
+    expect(spies().aliveCount(alice)).toBe(3);
+    expect(spies().canBuy(alice, homeTile())).toBe("max_spies");
 
-    for (let i = 1; i < SPY_SETTINGS.maxActive + 2; i++) sendSpy(alice, bob);
-    expect(spies().activeCount(alice)).toBe(SPY_SETTINGS.maxActive);
-    expect(spies().canSend(alice, bob)).toBe("max_spies");
+    // Not on someone else's land.
+    const bobTile = game.provinces().tilesOf(bobProvinces[0])[0] as TileRef;
+    expect(spies().canBuy(alice, bobTile)).toBe("no_land");
   });
 
-  test("cannot be sent at yourself, without gold, or at a player never seen", async () => {
-    expect(spies().canSend(alice, alice)).toBe("self");
-    const poor = game.player("bob");
-    poor.removeGold(poor.gold());
-    expect(spies().canSend(poor, alice)).toBe("gold");
-
-    // Carol has never been seen by Alice.
-    const g2 = await setup(MAP, { fogOfWar: true }, [
-      human("alice"),
-      human("carol"),
-    ]);
-    const a = g2.player("alice");
-    const carol = g2.player("carol");
-    for (const t of g2.provinces().tilesOf(1)) a.conquer(t);
-    const far = g2.provinces().count();
-    for (const t of g2.provinces().tilesOf(far)) carol.conquer(t);
-    a.addGold(1_000_000n);
-    g2.addExecution(new FogOfWarExecution());
-    for (let i = 0; i < 3; i++) g2.executeNextTick();
-    expect(g2.fogOfWar()!.spies().canSend(a, carol)).toBe("unknown_player");
+  test("move in a straight line at a fixed speed", () => {
+    const spy = buySpy();
+    const target = game.ref(90, 90);
+    command(alice, { kind: "order", spyID: spy.id, tile: target });
+    const x0 = spy.x;
+    const y0 = spy.y;
+    run(10);
+    const moved = Math.hypot(spy.x - x0, spy.y - y0) / 100;
+    expect(moved).toBeGreaterThan(10 * SPY_SETTINGS.tilesPerTick - 1);
+    expect(moved).toBeLessThan(10 * SPY_SETTINGS.tilesPerTick + 1);
   });
 
-  test("reveal the target's provinces for good, one by one, then come home", () => {
-    for (const p of bobProvinces) expect(vis(alice, p)).toBe(Unknown);
-    sendSpy(alice, bob);
+  test("explore a province you cannot see, then wait for orders", () => {
+    const spy = buySpy();
+    const unknown = bobProvinces[0];
+    expect(vis(alice, unknown)).toBe(Unknown);
+    command(alice, {
+      kind: "order",
+      spyID: spy.id,
+      tile: game.provinces().tilesOf(unknown)[0] as TileRef,
+    });
+    expect(spy.mission).toBe("province");
+    runUntil(() => game.fogOfWar()!.revealedBy(alice).has(unknown));
+    // Only that province: the rest of Bob's land is still unexplored.
+    expect(game.fogOfWar()!.revealedBy(alice).size).toBe(1);
+    expect(spies().aliveCount(alice)).toBe(1);
+    expect(spy.mission).toBe("none");
+  });
 
-    // The first province is revealed after one investigation (plus travel).
-    let revealed = 0;
-    for (let i = 0; i < PLENTY && spies().activeCount(alice) > 0; i += 10) {
-      run(10);
-      revealed = game.fogOfWar()!.revealedBy(alice).size;
-      if (revealed === 1) break;
+  test("investigating takes investigateTicks, however big the province", () => {
+    const spy = buySpy();
+    const unknown = bobProvinces[0];
+    command(alice, {
+      kind: "order",
+      spyID: spy.id,
+      tile: game.provinces().tilesOf(unknown)[0] as TileRef,
+    });
+    runUntil(() => spy.investigating);
+    let ticks = 0;
+    while (spy.investigating) {
+      run(1);
+      ticks++;
     }
-    expect(revealed).toBe(1);
+    expect(ticks).toBe(SPY_SETTINGS.investigateTicks);
+  });
 
-    run(PLENTY / 10);
-    for (const p of bobProvinces) {
-      expect(game.fogOfWar()!.revealedBy(alice).has(p)).toBe(true);
-    }
+  test("spy on a country: every province you cannot see, then wait", () => {
+    const spy = buySpy();
+    // Alice already sees Bob's tile next to her; the rest is unknown.
+    const bobTile = game.provinces().tilesOf([...neighbors(home)][0])[0];
+    command(alice, {
+      kind: "order",
+      spyID: spy.id,
+      tile: bobTile as TileRef,
+    });
+    expect(spy.mission).toBe("country");
+    expect(spy.target).toBe(bob.smallID());
+    // It heads for Bob's unseen provinces, not where it was clicked.
+    expect(bobProvinces).toContain(spy.goal);
+
+    runUntil(() => spy.mission === "none", 20_000);
+    const revealed = game.fogOfWar()!.revealedBy(alice);
+    for (const p of bobProvinces) expect(revealed.has(p)).toBe(true);
+    // Provinces it could already see live were not investigated.
+    for (const p of revealed) expect(bobProvinces).toContain(p);
     run(FOG_SETTINGS.updateIntervalTicks + 1);
     for (const p of bobProvinces) expect(vis(alice, p)).toBe(Visible);
-
-    // Done: the spy went home and Alice was told.
-    expect(spies().activeCount(alice)).toBe(0);
+    expect(spies().aliveCount(alice)).toBe(1);
     expect(
       messages.some(
         (m) =>
@@ -183,18 +226,23 @@ describe("spies", () => {
     ).toBe(true);
   });
 
-  test("its owner sees the province it is in", () => {
-    sendSpy(alice, bob);
-    run(FOG_SETTINGS.updateIntervalTicks + 1);
-    const spy = spies().list()[0];
-    expect(vis(alice, spy.province)).toBe(Visible);
+  test("the menus send your closest spy at a country", () => {
+    expect(spies().canSendAt(alice, bob)).toBe("no_spy");
+    const spy = buySpy();
+    command(alice, { kind: "send", targetID: bob.id() });
+    expect(spy.mission).toBe("country");
+    expect(spy.target).toBe(bob.smallID());
   });
 
   test("a caught spy dies, keeps nothing new, and both players are told", () => {
     SPY_SETTINGS.detectionPerMille = 1000;
-    sendSpy(alice, bob);
-    run(PLENTY / 20);
-    expect(spies().activeCount(alice)).toBe(0);
+    const spy = buySpy();
+    command(alice, {
+      kind: "order",
+      spyID: spy.id,
+      tile: game.provinces().tilesOf(bobProvinces[0])[0] as TileRef,
+    });
+    runUntil(() => spies().aliveCount(alice) === 0);
     expect(game.fogOfWar()!.revealedBy(alice).size).toBe(0);
     const caught = messages.filter(
       (m) => m.messageType === MessageType.SPY_CAUGHT,
@@ -205,24 +253,50 @@ describe("spies", () => {
     ]);
   });
 
-  test("are sent to the clients with where they are and how far along", () => {
-    sendSpy(alice, bob);
-    run(FOG_SETTINGS.updateIntervalTicks * 2);
+  test("its owner sees the province it stands in", () => {
+    const spy = buySpy();
+    command(alice, {
+      kind: "order",
+      spyID: spy.id,
+      tile: game.provinces().tilesOf(bobProvinces[0])[0] as TileRef,
+    });
+    runUntil(() => spy.investigating);
+    run(FOG_SETTINGS.updateIntervalTicks + 1);
+    expect(vis(alice, bobProvinces[0])).toBe(Visible);
+  });
+
+  test("are sent to the clients while alive, and cleared when gone", () => {
+    SPY_SETTINGS.detectionPerMille = 1000;
+    const spy = buySpy();
+    run(1);
     const last = spyUpdates[spyUpdates.length - 1];
     expect(last.spies).toHaveLength(1);
     expect(last.spies[0]).toMatchObject({
+      id: spy.id,
       owner: alice.smallID(),
-      target: bob.smallID(),
+      moving: false,
+      mission: "none",
+      progress: null,
     });
-    expect(last.sent).toEqual([[alice.smallID(), 1]]);
+    command(alice, {
+      kind: "order",
+      spyID: spy.id,
+      tile: game.provinces().tilesOf(bobProvinces[0])[0] as TileRef,
+    });
+    runUntil(() => spies().aliveCount(alice) === 0);
+    run(1);
+    expect(spyUpdates[spyUpdates.length - 1].spies).toEqual([]);
   });
 
   test("survive a snapshot mid-mission", async () => {
-    sendSpy(alice, bob);
-    run(SPY_SETTINGS.investigateTicks);
+    const spy = buySpy();
+    command(alice, {
+      kind: "order",
+      spyID: spy.id,
+      tile: game.provinces().tilesOf(bobProvinces[0])[0] as TileRef,
+    });
+    run(5);
     const restored = await expectSnapshotRoundTrip(game, MAP, 40);
-    const a = restored.player("alice");
-    expect(restored.fogOfWar()!.spies().activeCount(a)).toBe(1);
     expect(restored.fogOfWar()!.spies().list()).toEqual(spies().list());
   });
 });

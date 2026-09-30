@@ -43,6 +43,7 @@ import { PlayerPanel } from "./layers/PlayerPanel";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
+import { SpyMarkers } from "./layers/SpyMarkers";
 import { TutorialPanel } from "./layers/TutorialPanel";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { WinModal } from "./layers/WinModal";
@@ -64,7 +65,8 @@ export function createRenderer(
     ghostStructure: null,
     rocketDirectionUp: true,
     upgradeMultiplier: 1,
-    spyTargeting: false,
+    spyPlacing: false,
+    selectedSpy: null,
   };
 
   //hide when the game renders
@@ -178,6 +180,14 @@ export function createRenderer(
     console.error("gold income panel not found");
   }
   goldIncomePanel.game = game;
+
+  const spyMarkers = document.querySelector("spy-markers") as SpyMarkers;
+  if (!(spyMarkers instanceof SpyMarkers)) {
+    console.error("spy markers not found");
+  }
+  spyMarkers.game = game;
+  spyMarkers.transformHandler = transformHandler;
+  spyMarkers.uiState = uiState;
 
   const replayPanel = document.querySelector("replay-panel") as ReplayPanel;
   if (!(replayPanel instanceof ReplayPanel)) {
@@ -366,6 +376,7 @@ export function createRenderer(
     newLobbyPrompt,
     replayPanel,
     goldIncomePanel,
+    spyMarkers,
     settingsModal,
     playerPanel,
     headsUpMessage,

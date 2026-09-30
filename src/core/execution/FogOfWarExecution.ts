@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FOG_SETTINGS } from "../configuration/ProvinceConfig";
+import { FOG_SETTINGS, SPY_SETTINGS } from "../configuration/ProvinceConfig";
 import {
   FogDelta,
   FogOfWar,
@@ -30,8 +30,8 @@ export class FogOfWarExecution implements Execution {
   private lastChanges: FogDelta = { provinces: [], known: [] };
   // Not snapshotted: a restored game resends everything on its first tick.
   private fullSyncPending = true;
-  // Spies last sent to the clients (to know when the list changed).
-  private sentSpyIDs = "";
+  // Whether the clients were last sent any spy (to clear the last one).
+  private spiesShown = false;
 
   init(mg: Game): void {
     this.mg = mg;
@@ -46,7 +46,7 @@ export class FogOfWarExecution implements Execution {
     const due =
       !fog.isStarted() ||
       ticks % Math.max(1, FOG_SETTINGS.updateIntervalTicks) === 0;
-    this.sendSpies(due);
+    this.sendSpies();
     if (due) this.lastChanges = fog.update();
     else if (!this.fullSyncPending) return;
 
@@ -70,31 +70,32 @@ export class FogOfWarExecution implements Execution {
   }
 
   /**
-   * Sends the spies to the clients when the list changed, or on each fog
-   * update while any is out (their progress moves).
+   * Sends the spies to the clients every tick while any is alive (they
+   * move), and once more when the last one is gone.
    */
-  private sendSpies(due: boolean): void {
+  private sendSpies(): void {
     const spies = this.fog!.spies();
-    const ids = spies
-      .list()
-      .map((s) => s.id)
-      .join(",");
-    const changed = ids !== this.sentSpyIDs || this.fullSyncPending;
-    if (!changed && !(due && ids !== "")) return;
-    this.sentSpyIDs = ids;
+    const list = spies.list();
+    if (list.length === 0 && !this.spiesShown && !this.fullSyncPending) {
+      return;
+    }
+    this.spiesShown = list.length > 0;
     this.mg!.addUpdate({
       type: GameUpdateType.Spies,
-      spies: spies.list().map((s) => ({
+      spies: list.map((s) => ({
         id: s.id,
         owner: s.owner,
-        target: s.target,
-        tile: spies.centerOf(s.province),
-        phase: s.phase,
-        progress: Math.floor(
-          (100 * (s.phaseTicks - s.ticksLeft)) / Math.max(1, s.phaseTicks),
-        ),
+        x: s.x / 100,
+        y: s.y / 100,
+        moving: s.x !== s.destX || s.y !== s.destY,
+        mission: s.mission,
+        progress: s.investigating
+          ? Math.floor(
+              (100 * (SPY_SETTINGS.investigateTicks - s.ticksLeft)) /
+                SPY_SETTINGS.investigateTicks,
+            )
+          : null,
       })),
-      sent: [...spies.sentCounts().entries()],
     });
   }
 
@@ -121,7 +122,7 @@ export class FogOfWarExecution implements Execution {
     return FogOfWarExecutionSnapshot.write({
       started: fog?.isStarted() ?? false,
       viewers: fog === null ? [] : viewersRecord(fog.viewerStates()),
-      spies: fog?.spies().state() ?? { spies: [], sent: [], nextID: 1 },
+      spies: fog?.spies().state() ?? { spies: [], nextID: 1 },
     });
   }
 
@@ -130,7 +131,7 @@ export class FogOfWarExecution implements Execution {
     this.active = true;
     this.lastChanges = { provinces: [], known: [] };
     this.fullSyncPending = true;
-    this.sentSpyIDs = "";
+    this.spiesShown = false;
     this.fog = new FogOfWar(r.game);
     r.game.setFogOfWar(this.fog);
     const viewers = new Map<number, ViewerState>();
@@ -158,8 +159,7 @@ export class FogOfWarExecution implements Execution {
     }
     this.fog.restore(s.started, viewers);
     this.fog.spies().restore({
-      spies: s.spies.spies.map((spy) => ({ ...spy, path: [...spy.path] })),
-      sent: s.spies.sent.map(([owner, n]) => [owner, n]),
+      spies: s.spies.spies.map((spy) => ({ ...spy })),
       nextID: s.spies.nextID,
     });
   }
@@ -213,16 +213,17 @@ const FogOfWarStateSchema = z.object({
       z.object({
         id: zInt(),
         owner: zPlayerRef(),
+        x: zInt(),
+        y: zInt(),
+        destX: zInt(),
+        destY: zInt(),
+        mission: z.enum(["none", "country", "province"]),
         target: zPlayerRef(),
-        province: zInt(),
-        path: z.array(zInt()),
         goal: zInt(),
-        phase: z.enum(["travel", "investigate"]),
+        investigating: z.boolean(),
         ticksLeft: zInt(),
-        phaseTicks: zInt(),
       }),
     ),
-    sent: z.array(z.tuple([zPlayerRef(), zInt()])),
     nextID: zInt(),
   }),
 });
@@ -230,10 +231,12 @@ type FogOfWarState = z.infer<typeof FogOfWarStateSchema>;
 
 export const FogOfWarExecutionSnapshot = execSnapshotType({
   name: "FogOfWar",
-  version: 2,
+  version: 3,
   migrations: {
     // v2 adds spies; games saved before had none.
     1: (d) => ({ ...d, spies: { spies: [], sent: [], nextID: 1 } }),
+    // v3 spies are map units; v2 spies (province hoppers) are dropped.
+    2: (d) => ({ ...d, spies: { spies: [], nextID: d.spies.nextID } }),
   },
   schema: FogOfWarStateSchema,
   cls: () => FogOfWarExecution,

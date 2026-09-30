@@ -777,15 +777,13 @@ export const centerButtonElement: CenterButtonElement = {
 };
 
 /**
- * Fog of war: send a spy at the player whose land was clicked, with its
- * price, or why not, in the tooltip. Built per menu opening (the price
- * changes).
+ * Fog of war: send one's closest spy at the player whose land was clicked,
+ * or why not in the tooltip. Built per menu opening (spies come and go).
  */
 function spyMenuElement(params: MenuElementParams): MenuElement | null {
   const target = params.selected;
   if (!params.game.fogActive() || target === null) return null;
   const refusal = params.game.spyRefusal(target);
-  const cost = renderNumber(params.game.nextSpyCost());
   return {
     id: "spy",
     name: "spy",
@@ -794,7 +792,7 @@ function spyMenuElement(params: MenuElementParams): MenuElement | null {
     color: COLORS.spy,
     tooltipItems: [
       {
-        text: translateText("player_panel.send_spy", { cost }),
+        text: translateText("player_panel.send_spy"),
         className: "title",
       },
       {

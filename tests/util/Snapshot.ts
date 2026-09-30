@@ -173,7 +173,7 @@ export const DERIVED_FIELDS = new Set<string>([
   // full resend a restored game owes its clients
   "lastChanges",
   "fullSyncPending",
-  "sentSpyIDs",
+  "spiesShown",
 ]);
 
 // Search engines whose fields are per-query scratch (stamps, scores, open

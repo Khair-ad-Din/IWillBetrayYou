@@ -102,24 +102,30 @@ pierda al recargar (Ctrl+F5).
 
 ## 4. Espías (M) — hecho (rama fog-of-war)
 
-Espía autónomo: eliges un país que conoces (botón "Espía" en su panel), lo
-mandas y él solo va de provincia en provincia (no casilla a casilla),
-cruzando el mar si hace falta. Empieza por las provincias de ese país más
-cercanas a lo que ya conoces y avanza como un frente. Las provincias que
-atraviesa de camino se ven mientras está en ellas (luego quedan en recuerdo).
-En el mapa sale una etiqueta "Espía 45%" donde está.
+El espía es una unidad que se mueve por el mapa como un barco:
 
-- Cada provincia que termina queda **visible en vivo para el resto de la
-  partida** (territorio, edificios, ataques, lo que pase en ella). Sin parte
-  de tropas: las tropas de otros solo se estiman.
-- Al acabar el país desaparece y libera su hueco. Si el país conquista
-  provincias nuevas, hará falta otro espía para verlas.
-- Detección por provincia investigada: si lo pillan muere (lo descubierto se
-  conserva) y la víctima recibe "X te está espiando".
-- Valores de partida, a ajustar jugando (SPY_SETTINGS): 15 s por provincia,
-  2 s por provincia de camino, 100k de oro el primero y 50k más cada uno que
-  mandes, máximo 3 a la vez, 2 % de detección, sin edificio necesario.
-- La IA no usa espías por ahora.
+- **Comprar**: botón del espía en la barra de abajo y clic en tu territorio
+  para colocarlo. 250k el primero, 1M el segundo, 5M el tercero (según los
+  que tengas vivos); máximo 3.
+- **Dar órdenes**: clic en tu espía (icono morado con un ninja) para
+  seleccionarlo y clic en el destino. Va en línea recta, por tierra y mar, a
+  18 casillas por segundo: cuanto más lejos, más tarda.
+  - Clic en una provincia **desconocida o recordada**: la explora (va, la
+    investiga y la deja revelada).
+  - Clic en tierra de un **país** que ves: lo espía entero. Él solo calcula
+    la ruta y va investigando sus provincias que no ves en vivo, empezando
+    por las pegadas a lo que ya conoces. Las que ya ves en vivo las salta.
+  - Clic en cualquier otro sitio: solo se mueve allí.
+  - Desde el menú del clic derecho o el panel de un país: manda a tu espía
+    más cercano a espiar ese país.
+- Investigar una provincia tarda 7,5 s fijos; el anillo del icono se llena
+  mientras tanto. Lo investigado queda visible en vivo el resto de la
+  partida, y ves en vivo la provincia en la que está el espía.
+- Al acabar una misión se queda quieto esperando órdenes. Detección: 2 % al
+  terminar cada provincia; si lo pillan muere (lo descubierto se conserva) y
+  los dos jugadores reciben un aviso.
+- Solo su dueño ve un espía. La IA no usa espías por ahora.
+- Todas las cifras en SPY_SETTINGS (src/core/configuration/ProvinceConfig.ts).
 
 Para más adelante: sabotaje (parar una mina, robar oro), contraespionaje,
 inteligencia pasiva por barcos de comercio y trenes (revelar la provincia de

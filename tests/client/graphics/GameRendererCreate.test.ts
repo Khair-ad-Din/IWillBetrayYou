@@ -30,6 +30,7 @@ const HUD_TAGS = [
   "new-lobby-prompt",
   "replay-panel",
   "gold-income-panel",
+  "spy-markers",
   "game-right-sidebar",
   "settings-modal",
   "graphics-settings-modal",

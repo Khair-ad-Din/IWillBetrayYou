@@ -337,7 +337,6 @@ export class GameView implements GameMap {
     if (spyUpdates.length > 0) {
       const latest = spyUpdates[spyUpdates.length - 1] as SpiesUpdate;
       this._spies = latest.spies;
-      this._spiesSent = new Map(latest.sent);
     }
     const siteUpdates = gu.updates[GameUpdateType.ResourceSites];
     if (siteUpdates.length > 0) {
@@ -1222,7 +1221,6 @@ export class GameView implements GameMap {
   }
 
   private _spies: SpyView[] = [];
-  private _spiesSent = new Map<number, number>();
   /** The local player's spies (fog of war). */
   mySpies(): SpyView[] {
     const me = this._myPlayer;
@@ -1231,21 +1229,31 @@ export class GameView implements GameMap {
   }
   /** Gold the local player's next spy costs (see SpyNetwork.cost). */
   nextSpyCost(): bigint {
-    const me = this._myPlayer;
-    const sent = me === null ? 0 : (this._spiesSent.get(me.smallID()) ?? 0);
-    return BigInt(SPY_SETTINGS.baseCost + SPY_SETTINGS.costStep * sent);
+    const costs = SPY_SETTINGS.costs;
+    const alive = this.mySpies().length;
+    return BigInt(costs[Math.min(alive, costs.length - 1)]);
   }
   /**
-   * Why the local player cannot send a spy at `target` right now, as a
-   * translation key under player_panel (null: they can). Mirrors
-   * SpyNetwork.canSend; the simulation has the last word.
+   * Why the local player cannot buy a spy right now, as a translation key
+   * under player_panel (null: they can).
+   */
+  spyBuyRefusal(): string | null {
+    const me = this._myPlayer;
+    if (me === null || !this.fogActive()) return "spy_unavailable";
+    if (this.mySpies().length >= SPY_SETTINGS.costs.length) return "spy_max";
+    if (me.gold() < this.nextSpyCost()) return "spy_no_gold";
+    return null;
+  }
+  /**
+   * Why the local player cannot send one of their spies at `target` from a
+   * menu, as a translation key under player_panel (null: they can). Mirrors
+   * SpyNetwork.canSendAt; the simulation has the last word.
    */
   spyRefusal(target: PlayerView): string | null {
     const me = this._myPlayer;
     if (me === null || !this.fogActive()) return "spy_unavailable";
     if (target === me || !target.isAlive()) return "spy_unavailable";
-    if (this.mySpies().length >= SPY_SETTINGS.maxActive) return "spy_max";
-    if (me.gold() < this.nextSpyCost()) return "spy_no_gold";
+    if (this.mySpies().length === 0) return "spy_none";
     return null;
   }
 

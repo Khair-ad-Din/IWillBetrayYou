@@ -225,17 +225,15 @@ export class UnitDisplay extends LitElement implements Controller {
   }
 
   /**
-   * Fog of war: the spy button. Click it, then click the country to spy
-   * on (ClientGameRunner.sendSpyAt); Esc or a right click cancels.
+   * Fog of war: the spy button. Click it, then click your own land to buy a
+   * spy there (ClientGameRunner.placeSpyAt); Esc or a right click cancels.
    */
   private renderSpyItem() {
     if (!this.game.config().fogOfWar()) return html``;
-    const me = this.game.myPlayer();
     const active = this.game.mySpies().length;
     const cost = this.game.nextSpyCost();
-    const canSend =
-      me !== null && active < SPY_SETTINGS.maxActive && me.gold() >= cost;
-    const selected = this.uiState.spyTargeting === true;
+    const canSend = this.game.spyBuyRefusal() === null;
+    const selected = this.uiState.spyPlacing === true;
     return html`
       <div
         class="flex flex-col items-center relative"
@@ -255,11 +253,9 @@ export class UnitDisplay extends LitElement implements Controller {
               >
                 <div class="font-bold text-sm mb-1">
                   ${translateText("spy.map_label")}
-                  (${active}/${SPY_SETTINGS.maxActive})
+                  (${active}/${SPY_SETTINGS.costs.length})
                 </div>
-                <div class="p-2">
-                  ${translateText("player_panel.send_spy_title")}
-                </div>
+                <div class="p-2">${translateText("spy.hotbar_desc")}</div>
                 <div class="px-2 pb-1 text-purple-300">
                   ${translateText("spy.hotbar_hint")}
                 </div>
@@ -280,10 +276,11 @@ export class UnitDisplay extends LitElement implements Controller {
              rounded-sm text-white"
           @click=${() => {
             if (selected) {
-              this.uiState.spyTargeting = false;
+              this.uiState.spyPlacing = false;
             } else if (canSend) {
               this.uiState.ghostStructure = null;
-              this.uiState.spyTargeting = true;
+              this.uiState.selectedSpy = null;
+              this.uiState.spyPlacing = true;
             }
             this.requestUpdate();
           }}

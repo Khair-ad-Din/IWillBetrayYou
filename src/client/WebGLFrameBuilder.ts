@@ -55,7 +55,6 @@ import {
   UT_MIRV_WARHEAD,
   UT_PORT,
 } from "./render/types/UnitType";
-import { translateText } from "./Utils";
 import type { GameView, PlayerView } from "./view";
 
 const PALETTE_SIZE = 4096;
@@ -243,7 +242,6 @@ export class WebGLFrameBuilder {
   private fogFilter: FogFilter | null = null;
   private fogVersion = -1;
   private fogWasActive = false;
-  private spyLabelCount = 0;
 
   constructor(private readonly view: MapRenderer) {
     this.palette = new Float32Array(PALETTE_SIZE * 2 * 4);
@@ -327,27 +325,7 @@ export class WebGLFrameBuilder {
     this.resolveDeadUnitExplosions(gameView);
     const frame = this.applyFog(gameView);
     this.syncResourceSites(gameView);
-    this.syncSpyLabels(gameView);
     uploadFrameData(this.view, frame);
-  }
-
-  /** The local player's spies, as labels on the province they are in. */
-  private syncSpyLabels(gameView: GameView): void {
-    const spies = gameView.mySpies();
-    if (spies.length === 0 && this.spyLabelCount === 0) return;
-    this.spyLabelCount = spies.length;
-    const name = translateText("spy.map_label");
-    this.view.setSpyLabels(
-      spies.map((s) => ({
-        x: gameView.x(s.tile) + 0.5,
-        y: gameView.y(s.tile) + 0.5,
-        text:
-          s.phase === "investigate" ? `${name} ${s.progress}%` : `${name}...`,
-        colorR: 0.78,
-        colorG: 0.6,
-        colorB: 1,
-      })),
-    );
   }
 
   /** The frame as the local player may see it under fog of war. */

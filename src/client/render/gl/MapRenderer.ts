@@ -255,10 +255,6 @@ export class MapRenderer {
   setAttackTroopLabels(labels: AttackTroopLabel[]): void {
     this.renderer?.setAttackTroopLabels(labels);
   }
-  /** The local player's spies on the map (fog of war). */
-  setSpyLabels(labels: AttackTroopLabel[]): void {
-    this.renderer?.setSpyLabels(labels);
-  }
   applyBonusEvents(events: BonusEvent[]): void {
     this.renderer?.applyBonusEvents(events);
   }

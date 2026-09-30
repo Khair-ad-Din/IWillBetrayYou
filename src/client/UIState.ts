@@ -6,8 +6,10 @@ export interface UIState {
   rocketDirectionUp: boolean;
   upgradeMultiplier: number;
   /**
-   * Fog of war: the spy button of the hotbar is on; the next click on
-   * another player's land sends them a spy.
+   * Fog of war: the spy button of the hotbar is on; the next click on the
+   * player's own land buys a spy there.
    */
-  spyTargeting?: boolean;
+  spyPlacing?: boolean;
+  /** Fog of war: the spy selected on the map; the next click orders it. */
+  selectedSpy?: number | null;
 }

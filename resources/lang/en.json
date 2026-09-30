@@ -1655,11 +1655,12 @@
     "reported": "Reported",
     "send_alliance": "Send Alliance",
     "send_gold": "Send Gold",
-    "send_spy": "Spy ({cost})",
-    "send_spy_title": "Send a spy: it reveals their provinces one by one, for the rest of the game",
+    "send_spy": "Send spy",
+    "send_spy_title": "Send your closest spy: it reveals the provinces of this country you cannot see, one by one, for the rest of the game",
     "send_troops": "Send Troops",
     "spy_max": "You already have as many spies out as you can",
     "spy_no_gold": "Not enough gold for a spy",
+    "spy_none": "Buy a spy first (spy button in the bottom bar)",
     "spy_unavailable": "Spies can only be sent in fog of war games, at other players",
     "start_trade": "Start Trading",
     "start_trade_all": "Start Trading with All",
@@ -1895,8 +1896,10 @@
     "team_percent_tooltip": "{team}: {percent}"
   },
   "spy": {
-    "hotbar_hint": "Then click the country to spy on (Esc cancels)",
-    "map_label": "Spy"
+    "hotbar_desc": "Buy a spy. Place it on your land, then send it like a ship: at a country to spy on it, or at a province you cannot see to explore it",
+    "hotbar_hint": "Click your own land to place it (Esc cancels). Then click the spy to select it and click where to send it",
+    "map_label": "Spy",
+    "marker_title": "Your spy: click to select it, then click where to send it"
   },
   "steam_grant": {
     "ended_body": "The month of {tier} that came with your Steam purchase has ended. Nothing has been charged and nothing will be. You keep the full game: every map and mode, online play, ranked with the free daily limit, and custom lobbies with friends. The Steam app stays ad-free. If you want the {tier} perks back, you can subscribe from the store at any time.",

@@ -140,8 +140,6 @@ export class WorldTextPass {
   // Persistent attack-troop labels. Controller pushes the full list each frame
   // (already interpolated), so we just iterate and render.
   private attackTroopLabels: AttackTroopLabel[] = [];
-  /** The local player's spies (fog of war), drawn like attack labels. */
-  private spyLabels: AttackTroopLabel[] = [];
 
   // Settings reference
   private settings: RenderSettings;
@@ -377,10 +375,6 @@ export class WorldTextPass {
     this.attackTroopLabels = labels;
   }
 
-  setSpyLabels(labels: AttackTroopLabel[]): void {
-    this.spyLabels = labels;
-  }
-
   // -------------------------------------------------------------------------
   // Tick — cull expired, rebuild instance buffer
   // -------------------------------------------------------------------------
@@ -389,8 +383,7 @@ export class WorldTextPass {
     if (
       this.active.length === 0 &&
       this.ghostCostLabel === null &&
-      this.attackTroopLabels.length === 0 &&
-      this.spyLabels.length === 0
+      this.attackTroopLabels.length === 0
     ) {
       this.instanceCount = 0;
       return;
@@ -460,7 +453,7 @@ export class WorldTextPass {
     // a constant on-screen size regardless of how zoomed-in the camera is.
     const attackScale =
       (ATTACK_LABEL_SCREEN_SCALE * dpr) / Math.max(zoom, 0.0001);
-    for (const label of [...this.attackTroopLabels, ...this.spyLabels]) {
+    for (const label of this.attackTroopLabels) {
       layoutString(
         label.text,
         this.glyph,
@@ -623,7 +616,6 @@ export class WorldTextPass {
   clear(): void {
     this.active.length = 0;
     this.attackTroopLabels = [];
-    this.spyLabels = [];
     this.instanceCount = 0;
   }
 

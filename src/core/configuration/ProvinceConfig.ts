@@ -91,22 +91,21 @@ export const FOG_SETTINGS = {
 };
 
 /**
- * Spies (fog of war only): sent at a known player, a spy works through their
- * provinces on its own, closest to what its owner already knows first. Each
- * province it finishes stays visible to its owner for the rest of the game.
+ * Spies (fog of war only): bought and placed on the owner's land like a
+ * building, then sent around the map like a ship. Sent at a country, a spy
+ * works through its provinces the owner cannot see, closest to what the
+ * owner already knows first; sent at an unknown or remembered province, it
+ * explores that one. Everything it investigates stays visible to its owner
+ * for the rest of the game.
  */
 export const SPY_SETTINGS = {
-  /** Gold for a player's first spy; each one sent after costs costStep more. */
-  baseCost: 100_000,
-  costStep: 50_000,
-  /** Spies a player can have out at once. */
-  maxActive: 3,
-  /** Ticks to investigate one province (10 ticks = 1 s). */
-  investigateTicks: 15 * 10,
-  /** Ticks to cross one province on the way to the next target. */
-  travelTicksPerProvince: 2 * 10,
-  /** Ticks per tile of distance when it has to cross the sea. */
-  seaTicksPerTile: 0.5,
+  /** Price of a spy by how many the player already has alive (so also the
+   * most they can have at once). */
+  costs: [250_000, 1_000_000, 5_000_000],
+  /** Tiles a spy moves per tick, over land and sea (10 ticks = 1 s). */
+  tilesPerTick: 1.8,
+  /** Ticks to investigate one province. */
+  investigateTicks: Math.round(7.5 * 10),
   /** Chance, per thousand, of being caught at the end of each province. */
   detectionPerMille: 20,
 };
