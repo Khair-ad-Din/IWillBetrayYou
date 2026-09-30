@@ -14,6 +14,7 @@ import {
 } from "../../core/game/Game";
 import { GameMap, TileRef } from "../../core/game/GameMap";
 import {
+  FogOfWarUpdate,
   GameUpdateType,
   GameUpdateViewData,
   ResourceSitesUpdate,
@@ -43,6 +44,7 @@ import { TrailManager } from "../render/frame/TrailManager";
 import type { FrameData, NameEntry } from "../render/types";
 import { STRUCTURE_TYPES } from "../render/types";
 import { resolveTeamClanTag } from "../Utils";
+import { ClientFog } from "./ClientFog";
 import type { CosmeticVisibility } from "./CosmeticVisibility";
 import { PlayerView } from "./PlayerView";
 import { UnitView } from "./UnitView";
@@ -324,6 +326,9 @@ export class GameView implements GameMap {
     }
     if (gu.updates[GameUpdateType.Win].length > 0) {
       this._gameOver = true;
+    }
+    for (const u of gu.updates[GameUpdateType.FogOfWar]) {
+      this._fog.apply(u as FogOfWarUpdate);
     }
     const siteUpdates = gu.updates[GameUpdateType.ResourceSites];
     if (siteUpdates.length > 0) {
@@ -1150,6 +1155,12 @@ export class GameView implements GameMap {
   // Set once the sim has decided the game (WinUpdate). Play may go on for
   // those who stay, but the server archives the record at that point.
   // Resource sites as last sent by the simulation (after the spawn phase).
+  private readonly _fog = new ClientFog();
+  /** The fog of war as the simulation reports it (inactive without fog). */
+  fog(): ClientFog {
+    return this._fog;
+  }
+
   private _resourceSites: ResourceSitesUpdate["sites"] = [];
   private _resourceSitesVersion = 0;
   resourceSites(): ResourceSitesUpdate["sites"] {

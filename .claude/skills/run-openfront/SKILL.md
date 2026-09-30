@@ -170,6 +170,15 @@ npm test                                      # full suite (Vitest)
 npx vitest tests/MapConsistency.test.ts --run # single file
 ```
 
+## Windows
+
+`setup.sh` is Linux-only. On Windows, install Playwright with
+`npm install --no-save --ignore-scripts playwright` (the browsers live in
+`%LOCALAPPDATA%\ms-playwright`). `launch()` then uses the real GPU
+(`--use-angle=d3d11`) because the game refuses SwiftShader ("WebGL2
+unavailable: software"); no rAF throttle is needed there. Write screenshots
+to the session scratchpad rather than `/tmp`.
+
 ## Gotchas
 
 - **Vite serves on port 9000**, not 5173 (configured in vite.config.ts).

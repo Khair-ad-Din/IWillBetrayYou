@@ -16,6 +16,8 @@ out vec4 fragColor;
 
 const uint FLAG_OUTGOING = 1u;  // the local player is attacking it
 const uint FLAG_INCOMING = 2u;  // the local player is attacked there
+const uint FLAG_REMEMBERED = 4u;  // fog of war: seen before, not now
+const vec4 VEIL = vec4(0.42, 0.43, 0.47, 0.45);
 
 uint provinceAt(ivec2 t) {
   if (t.x < 0 || t.y < 0 || t.x >= int(uMapSize.x) || t.y >= int(uMapSize.y))
@@ -49,7 +51,9 @@ void main() {
   uint id = provinceAt(tile);
   if (id == 0u) discard;
 
-  uint flags = flagsOf(id);
+  uint allFlags = flagsOf(id);
+  bool remembered = (allFlags & FLAG_REMEMBERED) != 0u;
+  uint flags = allFlags & (FLAG_OUTGOING | FLAG_INCOMING);
   bool hovered = id == uHighlight;
   bool emphasized = hovered || flags != 0u;
 
@@ -73,7 +77,11 @@ void main() {
              (f.y < lw && differs(id, tile + ivec2(0, -1))) ||
              (f.y > 1.0 - lw && differs(id, tile + ivec2(0, 1)));
     }
-    if (!line) discard;
+    if (!line) {
+      if (!remembered) discard;
+      fragColor = VEIL;
+      return;
+    }
     fragColor = vec4(uColor, uOpacity);
     return;
   }

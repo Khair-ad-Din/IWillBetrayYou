@@ -1189,6 +1189,11 @@ export class GPURenderer {
     this.provincePass.setAttackedProvinces(outgoing, incoming);
   }
 
+  /** Provinces the local player only remembers (fog of war). */
+  setRememberedProvinces(provinces: number[]): void {
+    this.provincePass.setRememberedProvinces(provinces);
+  }
+
   /** Unclaimed resource sites, drawn as neutral structures. */
   setResourceSites(sites: ResourceSiteMarker[]): void {
     this.structurePass.setResourceSites(sites);

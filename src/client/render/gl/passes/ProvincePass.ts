@@ -7,7 +7,8 @@
  * the local player is attacking (orange) or being attacked in (red). Those
  * and the hovered province (white) get a solid accent stroke with a thin dark
  * rim outside, which keeps them readable next to a similar territory color,
- * and a faint wash; provinces under attack pulse.
+ * and a faint wash; provinces under attack pulse. Under fog of war,
+ * provinces the player only remembers get a grey veil.
  * Nothing is drawn until setProvinces() provides the ids.
  */
 
@@ -25,6 +26,7 @@ import provinceFragSrc from "../shaders/province/province.frag.glsl?raw";
 const FLAG_TEX_WIDTH = 256;
 const FLAG_OUTGOING = 1;
 const FLAG_INCOMING = 2;
+const FLAG_REMEMBERED = 4;
 
 export class ProvincePass {
   private gl: WebGL2RenderingContext;
@@ -33,6 +35,8 @@ export class ProvincePass {
   private provinceTex: WebGLTexture | null = null;
   private flagTex: WebGLTexture | null = null;
   private flags = new Uint8Array(FLAG_TEX_WIDTH);
+  private attackFlags: [number[], number[]] = [[], []];
+  private remembered: number[] = [];
   private highlight = 0;
 
   private uCamera: WebGLUniformLocation;
@@ -91,7 +95,7 @@ export class ProvincePass {
     for (let i = 0; i < ids.length; i++) if (ids[i] > maxId) maxId = ids[i];
     const rows = Math.floor(maxId / FLAG_TEX_WIDTH) + 1;
     this.flags = new Uint8Array(rows * FLAG_TEX_WIDTH);
-    this.uploadFlags();
+    this.rebuildFlags();
   }
 
   /** The province under the cursor (0 = none). */
@@ -101,13 +105,26 @@ export class ProvincePass {
 
   /** Provinces the local player is attacking and being attacked in. */
   setAttackedProvinces(outgoing: number[], incoming: number[]): void {
+    this.attackFlags = [outgoing, incoming];
+    this.rebuildFlags();
+  }
+
+  /** Provinces the local player only remembers (fog of war). */
+  setRememberedProvinces(provinces: number[]): void {
+    this.remembered = provinces;
+    this.rebuildFlags();
+  }
+
+  private rebuildFlags(): void {
     this.flags.fill(0);
-    for (const p of outgoing) {
-      if (p > 0 && p < this.flags.length) this.flags[p] |= FLAG_OUTGOING;
-    }
-    for (const p of incoming) {
-      if (p > 0 && p < this.flags.length) this.flags[p] |= FLAG_INCOMING;
-    }
+    const mark = (list: number[], flag: number) => {
+      for (const p of list) {
+        if (p > 0 && p < this.flags.length) this.flags[p] |= flag;
+      }
+    };
+    mark(this.attackFlags[0], FLAG_OUTGOING);
+    mark(this.attackFlags[1], FLAG_INCOMING);
+    mark(this.remembered, FLAG_REMEMBERED);
     this.uploadFlags();
   }
 

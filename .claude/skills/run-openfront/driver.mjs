@@ -33,8 +33,15 @@ export async function launch({ viewport, rafIntervalMs, args } = {}) {
       : libs;
     env.FONTCONFIG_FILE = path.join(CACHE, "fonts.conf");
   }
+  // On Windows the headless shell can use the real GPU through ANGLE/D3D11;
+  // the game refuses software WebGL (SwiftShader), which is all it gets
+  // with --disable-gpu there.
+  const gpuArgs =
+    process.platform === "win32"
+      ? ["--use-angle=d3d11", "--enable-gpu", "--ignore-gpu-blocklist"]
+      : ["--no-sandbox", "--disable-gpu"];
   const browser = await chromium.launch({
-    args: ["--no-sandbox", "--disable-gpu", ...(args ?? [])],
+    args: [...gpuArgs, ...(args ?? [])],
     env,
   });
   const context = await browser.newContext({

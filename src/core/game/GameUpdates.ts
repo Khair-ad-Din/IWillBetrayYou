@@ -1,4 +1,5 @@
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
+import type { FogChange, FogKnownPlayer } from "./FogOfWar";
 import {
   EmojiMessage,
   GameUpdates,
@@ -108,6 +109,7 @@ export enum GameUpdateType {
   GamePaused,
   DonateEvent,
   ResourceSites,
+  FogOfWar,
 }
 
 export type GameUpdate =
@@ -134,9 +136,22 @@ export type GameUpdate =
   | SpawnPhaseEndUpdate
   | GamePausedUpdate
   | DonateEventUpdate
-  | ResourceSitesUpdate;
+  | ResourceSitesUpdate
+  | FogOfWarUpdate;
 
 export type ResourceSiteState = "unclaimed" | "claimed" | "destroyed";
+
+/**
+ * Fog of war changes for every human player (clients keep their own). With
+ * `full`, it replaces all a client knew: it lists every province that is not
+ * Unknown and every known player (first update, and after a restore).
+ */
+export interface FogOfWarUpdate {
+  type: GameUpdateType.FogOfWar;
+  full: boolean;
+  provinces: FogChange[];
+  known: FogKnownPlayer[];
+}
 
 /** Every resource site and its state; sent whenever one changes. */
 export interface ResourceSitesUpdate {

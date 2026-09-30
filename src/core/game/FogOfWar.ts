@@ -40,6 +40,18 @@ export interface FogChange {
   memory?: ProvinceMemory;
 }
 
+/** A player `viewer` saw for the first time. */
+export interface FogKnownPlayer {
+  viewer: number;
+  player: number;
+}
+
+/** What one fog update changed. */
+export interface FogDelta {
+  provinces: FogChange[];
+  known: FogKnownPlayer[];
+}
+
 /** What one player knows, keyed by their smallID in FogOfWar. */
 export interface ViewerState {
   /** ProvinceVisibility per province id (index 0 unused). */
@@ -121,8 +133,28 @@ export class FogOfWar {
     for (const [id, v] of viewers) this.viewers.set(id, v);
   }
 
+  /** Everything every viewer knows, as changes from a blank state. */
+  fullState(): FogDelta {
+    const provinces: FogChange[] = [];
+    const known: FogKnownPlayer[] = [];
+    for (const [viewer, v] of this.viewers) {
+      for (let p = 1; p < v.visibility.length; p++) {
+        const visibility = v.visibility[p] as ProvinceVisibility;
+        if (visibility === ProvinceVisibility.Unknown) continue;
+        const memory = v.memory.get(p);
+        provinces.push(
+          memory === undefined
+            ? { viewer, province: p, visibility }
+            : { viewer, province: p, visibility, memory },
+        );
+      }
+      for (const player of v.known) known.push({ viewer, player });
+    }
+    return { provinces, known };
+  }
+
   /** Recomputes every human player's vision and returns what changed. */
-  update(): FogChange[] {
+  update(): FogDelta {
     for (const p of this.game.players()) {
       if (p.type() === PlayerType.Human) this.viewerState(p.smallID());
     }
@@ -165,6 +197,7 @@ export class FogOfWar {
 
     let structures: Map<number, RememberedStructure[]> | null = null;
     const changes: FogChange[] = [];
+    const known: FogKnownPlayer[] = [];
     const tick = this.game.ticks();
     const ids = [...this.viewers.keys()].sort((a, b) => a - b);
     for (const id of ids) {
@@ -189,7 +222,11 @@ export class FogOfWar {
         }
         const old = state.visibility[p] as ProvinceVisibility;
         if (visible) {
-          for (const owner of provinceOwners[p]) state.known.add(owner);
+          for (const owner of provinceOwners[p]) {
+            if (owner === id || state.known.has(owner)) continue;
+            state.known.add(owner);
+            known.push({ viewer: id, player: owner });
+          }
           if (old !== ProvinceVisibility.Visible) {
             state.visibility[p] = ProvinceVisibility.Visible;
             state.memory.delete(p);
@@ -218,7 +255,7 @@ export class FogOfWar {
       }
     }
     this.started = true;
-    return changes;
+    return { provinces: changes, known };
   }
 
   private viewerState(id: number): ViewerState {

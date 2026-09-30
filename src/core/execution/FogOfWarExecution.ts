@@ -1,13 +1,14 @@
 import { z } from "zod";
 import { FOG_SETTINGS } from "../configuration/ProvinceConfig";
 import {
-  FogChange,
+  FogDelta,
   FogOfWar,
   ProvinceMemory,
   ViewerState,
 } from "../game/FogOfWar";
 import { Execution, Game, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { GameUpdateType } from "../game/GameUpdates";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
 import type {
   ExecRecord,
@@ -18,15 +19,20 @@ import { zBytes, zInt, zPlayerRef, zTile } from "../snapshot/SnapshotType";
 
 /**
  * Runs the fog of war (game option): recomputes every human player's vision
- * every FOG_SETTINGS.updateIntervalTicks once the spawn phase is over, and
- * keeps what they remember across snapshots.
+ * every FOG_SETTINGS.updateIntervalTicks once the spawn phase is over, sends
+ * the changes to the clients, and keeps what players remember across
+ * snapshots.
  */
 export class FogOfWarExecution implements Execution {
+  private mg: Game | null = null;
   private fog: FogOfWar | null = null;
   private active = true;
-  private lastChanges: FogChange[] = [];
+  private lastChanges: FogDelta = { provinces: [], known: [] };
+  // Not snapshotted: a restored game resends everything on its first tick.
+  private fullSyncPending = true;
 
   init(mg: Game): void {
+    this.mg = mg;
     if (this.fog !== null) return;
     this.fog = new FogOfWar(mg);
     mg.setFogOfWar(this.fog);
@@ -34,17 +40,33 @@ export class FogOfWarExecution implements Execution {
 
   tick(ticks: number): void {
     const fog = this.fog!;
-    if (
-      fog.isStarted() &&
-      ticks % Math.max(1, FOG_SETTINGS.updateIntervalTicks) !== 0
+    const due =
+      !fog.isStarted() ||
+      ticks % Math.max(1, FOG_SETTINGS.updateIntervalTicks) === 0;
+    if (due) this.lastChanges = fog.update();
+    else if (!this.fullSyncPending) return;
+
+    if (this.fullSyncPending) {
+      this.fullSyncPending = false;
+      this.mg!.addUpdate({
+        type: GameUpdateType.FogOfWar,
+        full: true,
+        ...fog.fullState(),
+      });
+    } else if (
+      this.lastChanges.provinces.length > 0 ||
+      this.lastChanges.known.length > 0
     ) {
-      return;
+      this.mg!.addUpdate({
+        type: GameUpdateType.FogOfWar,
+        full: false,
+        ...this.lastChanges,
+      });
     }
-    this.lastChanges = fog.update();
   }
 
   /** The changes of the last update, for tests. */
-  changes(): readonly FogChange[] {
+  changes(): FogDelta {
     return this.lastChanges;
   }
 
@@ -70,8 +92,10 @@ export class FogOfWarExecution implements Execution {
   }
 
   restoreSnapshot(s: FogOfWarState, r: SnapshotReader): void {
+    this.mg = r.game;
     this.active = true;
-    this.lastChanges = [];
+    this.lastChanges = { provinces: [], known: [] };
+    this.fullSyncPending = true;
     this.fog = new FogOfWar(r.game);
     r.game.setFogOfWar(this.fog);
     const viewers = new Map<number, ViewerState>();

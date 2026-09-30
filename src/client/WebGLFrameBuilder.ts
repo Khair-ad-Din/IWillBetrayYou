@@ -18,6 +18,7 @@ import { ResourceType } from "../core/game/ResourceSites";
 import { decodePatternData } from "../core/PatternDecoder";
 import { getCachedCosmetics } from "./Cosmetics";
 import { buildTerrainRowSpans } from "./render/frame/derive/TerrainRowSpans";
+import { FogFilter, FogViewer } from "./render/frame/FogFilter";
 import { uploadFrameData } from "./render/frame/Upload";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
 // imports into any non-Vite consumer (e.g. the Node perf harness).
@@ -234,6 +235,11 @@ export class WebGLFrameBuilder {
   // Last pushed "outgoing|incoming" province lists, to skip no-op uploads.
   private attackedProvincesKey = "";
   private resourceSitesVersion = -1;
+  // Fog of war: created once the simulation sends the fog. The veil and the
+  // resource markers are re-pushed when the fog changes.
+  private fogFilter: FogFilter | null = null;
+  private fogVersion = -1;
+  private fogWasActive = false;
 
   constructor(private readonly view: MapRenderer) {
     this.palette = new Float32Array(PALETTE_SIZE * 2 * 4);
@@ -254,6 +260,8 @@ export class WebGLFrameBuilder {
     this.lastSpawnTile.clear();
     this.localPlayerSmallID = 0;
     this.skinsInitialized = false;
+    this.fogFilter?.invalidate();
+    this.fogVersion = -1;
   }
 
   /**
@@ -308,13 +316,58 @@ export class WebGLFrameBuilder {
     this.syncPlayerSpawns(gameView);
     this.syncLocalPlayer(gameView);
     this.syncAttackedProvinces(gameView);
-    this.syncResourceSites(gameView);
     this.syncSpawnOverlay(gameView);
     this.syncSmallPlayerGlow(gameView);
     this.syncTerrainDeltas(gameView);
     this.syncNukeImpacts(gameView);
     this.resolveDeadUnitExplosions(gameView);
-    uploadFrameData(this.view, gameView.frameData());
+    const frame = this.applyFog(gameView);
+    this.syncResourceSites(gameView);
+    uploadFrameData(this.view, frame);
+  }
+
+  /** The frame as the local player may see it under fog of war. */
+  private applyFog(gameView: GameView) {
+    const frame = gameView.frameData();
+    const fog = gameView.fog();
+    if (!fog.started()) return frame;
+    if (this.fogFilter === null) {
+      const ids = this.view.provinceIdMap();
+      if (ids === null) return frame;
+      this.fogFilter = new FogFilter(ids, gameView.width(), gameView.height());
+    }
+
+    const me = gameView.myPlayer();
+    const friendly = new Map<number, boolean>();
+    let byID: Map<string, number> | null = null;
+    const viewer: FogViewer = {
+      smallID: me?.smallID() ?? 0,
+      isFriendly: (id) => {
+        if (me === null) return false;
+        if (id === me.smallID()) return true;
+        let f = friendly.get(id);
+        if (f === undefined) {
+          const other = gameView.playerBySmallID(id);
+          f = other.isPlayer() && me.isFriendly(other);
+          friendly.set(id, f);
+        }
+        return f;
+      },
+      smallIDOf: (playerID) => {
+        byID ??= new Map(gameView.players().map((p) => [p.id(), p.smallID()]));
+        return byID.get(playerID);
+      },
+    };
+    const filtered = this.fogFilter.filter(frame, fog, viewer);
+
+    const active = this.fogFilter.isActive();
+    if (fog.version() !== this.fogVersion || active !== this.fogWasActive) {
+      this.fogVersion = fog.version();
+      this.fogWasActive = active;
+      this.view.setRememberedProvinces(this.fogFilter.rememberedProvinces());
+      this.resourceSitesVersion = -1; // re-filter the markers
+    }
+    return filtered;
   }
 
   /**
@@ -439,6 +492,10 @@ export class WebGLFrameBuilder {
     const markers: ResourceSiteMarker[] = [];
     for (const site of gameView.resourceSites()) {
       if (site.state !== "unclaimed") continue;
+      // Under fog of war, sites in provinces never seen stay hidden.
+      if (this.fogFilter !== null && !this.fogFilter.tileKnown(site.tile)) {
+        continue;
+      }
       switch (site.type) {
         case ResourceType.Farm:
           markers.push({ tile: site.tile, unitType: UT_FARM, natural: false });

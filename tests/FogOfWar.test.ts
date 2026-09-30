@@ -10,6 +10,7 @@ import {
   PlayerType,
   UnitType,
 } from "../src/core/game/Game";
+import { FogOfWarUpdate, GameUpdateType } from "../src/core/game/GameUpdates";
 import { setup } from "./util/Setup";
 import { expectSnapshotRoundTrip } from "./util/Snapshot";
 
@@ -218,12 +219,14 @@ describe("fog of war", () => {
 
   test("only visibility changes are reported", () => {
     startFog();
-    const first = fog.changes().filter((c) => c.viewer === alice.smallID());
+    const first = fog
+      .changes()
+      .provinces.filter((c) => c.viewer === alice.smallID());
     expect(first.map((c) => c.province).sort((a, b) => a - b)).toEqual(
       [home, ...neighbors(home)].sort((a, b) => a - b),
     );
     updateFog();
-    expect(fog.changes()).toEqual([]);
+    expect(fog.changes()).toEqual({ provinces: [], known: [] });
   });
 
   test("the fog and what players remember survive a snapshot", async () => {
@@ -247,5 +250,37 @@ describe("fog of war", () => {
       game.fogOfWar()!.memory(alice, far),
     );
     expect(restoredFog.knowsPlayer(a, restored.player("bob"))).toBe(true);
+  });
+});
+
+describe("fog of war updates for the clients", () => {
+  test("the first update is full, later ones only carry changes", () => {
+    game.executeNextTick();
+    let sent = game.executeNextTick()[GameUpdateType.FogOfWar];
+    for (let i = 0; i < 5 && sent.length === 0; i++) {
+      sent = game.executeNextTick()[GameUpdateType.FogOfWar];
+    }
+    const first = sent[0] as FogOfWarUpdate;
+    expect(first.full).toBe(true);
+    expect(
+      first.provinces.filter((c) => c.viewer === alice.smallID()).length,
+    ).toBe(1 + neighbors(home).size);
+
+    // Bob shows up next to Alice: a partial update with him now known.
+    const [nb] = neighbors(home);
+    bob.conquer(game.provinces().tilesOf(nb)[0]);
+    const updates: FogOfWarUpdate[] = [];
+    for (let i = 0; i < 2 * FOG_SETTINGS.updateIntervalTicks; i++) {
+      updates.push(
+        ...(game.executeNextTick()[
+          GameUpdateType.FogOfWar
+        ] as FogOfWarUpdate[]),
+      );
+    }
+    expect(updates.every((u) => !u.full)).toBe(true);
+    expect(updates.flatMap((u) => u.known)).toContainEqual({
+      viewer: alice.smallID(),
+      player: bob.smallID(),
+    });
   });
 });

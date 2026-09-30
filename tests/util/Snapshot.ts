@@ -169,8 +169,10 @@ export const DERIVED_FIELDS = new Set<string>([
   // and only read inside it. (AiAttackBehavior.nbuf is covered above.)
   "_sharedWaterComponents",
   "reachableStationsCache",
-  // FogOfWarExecution: the last update's changes, for tests
+  // FogOfWarExecution: the last update's changes (for tests) and the
+  // full resend a restored game owes its clients
   "lastChanges",
+  "fullSyncPending",
 ]);
 
 // Search engines whose fields are per-query scratch (stamps, scores, open
